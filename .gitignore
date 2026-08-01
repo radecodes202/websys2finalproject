@@ -1,0 +1,10 @@
+.venv
+.remember
+.claude
+.vscode
+
+.env
+
+/docs
+
+*.pyc
