@@ -12,5 +12,6 @@ urlpatterns = [
     path('password_change/', views.PasswordChangeView.as_view(), name='password_change'),
     path('password_change/done/', views.PasswordChangeDoneView.as_view(), name='password_change_done'),
     path('register/', views.RegisterView.as_view(), name='register'),
+    path('admin/register/', views.AdminRegisterView.as_view(), name='admin_register'),
     path('pending/', views.PendingUserListView.as_view(), name='pending_users'),
 ]

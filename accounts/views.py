@@ -12,7 +12,7 @@ from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from product.models import Alert, Product, Sale
-from .forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm, AdminUserCreationForm
 from .mixins import RoleRequiredMixin
 
 User = get_user_model()
@@ -81,6 +81,31 @@ class RegisterView(View):
             user.save()
             messages.success(request, 'Your account has been created and is pending approval. You will be notified once approved.')
             return redirect('accounts:login')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+        return render(request, self.template_name, {'form': form})
+
+
+class AdminRegisterView(RoleRequiredMixin, View):
+    """Admin-only view to register new users, including other admins.
+
+    Only users with the ``admin`` role can access this view.
+    Users created here (including admins) are immediately approved
+    and active, bypassing the pending-approval workflow.
+    """
+    template_name = 'accounts/admin_register.html'
+    allowed_roles = ['admin']
+
+    def get(self, request):
+        form = AdminUserCreationForm()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        form = AdminUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=True)
+            messages.success(request, f'User {user.username} has been registered and approved.')
+            return redirect('accounts:pending_users')
         else:
             messages.error(request, 'Please correct the errors below.')
         return render(request, self.template_name, {'form': form})

@@ -337,3 +337,112 @@ class RoleBasedAccessTests(TestCase):
             self.client.force_login(user)
             response = self.client.get(self.pending_url)
             self.assertEqual(response.status_code, 403)
+
+
+# ------------------------------------------------------------------
+# Admin-only user registration (including admin role)
+# ------------------------------------------------------------------
+class AdminRoleRegistrationTests(TestCase):
+    """Verify that:
+    * the public register form does **not** expose the ``admin`` role,
+    * only admins can reach the admin-only registration view,
+    * admins can create new admins who are immediately approved.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user(
+            username='admin_user', email='admin@example.com',
+            password='StrongPass123', role='admin', is_approved=True,
+        )
+        cls.cashier = User.objects.create_user(
+            username='cashier_user', email='cashier@example.com',
+            password='StrongPass123', role='cashier', is_approved=True,
+        )
+        cls.register_url = reverse('accounts:register')
+        cls.admin_register_url = reverse('accounts:admin_register')
+
+    # -- public / self-registration form --------------------------------
+    def test_self_register_form_excludes_admin_role(self):
+        from accounts.forms import CustomUserCreationForm
+        form = CustomUserCreationForm()
+        roles = [choice[0] for choice in form.fields['role'].choices]
+        self.assertNotIn('admin', roles)
+
+    def test_self_register_form_includes_non_admin_roles(self):
+        from accounts.forms import CustomUserCreationForm
+        form = CustomUserCreationForm()
+        roles = [choice[0] for choice in form.fields['role'].choices]
+        self.assertIn('manager', roles)
+        self.assertIn('cashier', roles)
+        self.assertIn('inventory_staff', roles)
+
+    def test_anonymous_user_can_access_self_register(self):
+        response = self.client.get(self.register_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_authenticated_user_redirected_from_self_register(self):
+        self.client.force_login(self.cashier)
+        response = self.client.get(self.register_url)
+        self.assertEqual(response.status_code, 302)
+
+    # -- admin-only registration view -----------------------------------
+    def test_admin_register_view_accessible_to_admin(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(self.admin_register_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'accounts/admin_register.html')
+
+    def test_admin_register_view_forbidden_to_non_admin(self):
+        for user in [self.cashier]:
+            self.client.force_login(user)
+            response = self.client.get(self.admin_register_url)
+            self.assertEqual(response.status_code, 403)
+
+    def test_anonymous_user_redirected_from_admin_register(self):
+        response = self.client.get(self.admin_register_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, f"{reverse('accounts:login')}?next={self.admin_register_url}")
+
+    # -- admin creates a new admin via the form -------------------------
+    def test_admin_can_create_new_admin_user(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.admin_register_url, {
+            'username': 'new_admin',
+            'email': 'newadmin@example.com',
+            'role': 'admin',
+            'password1': 'StrongPass123',
+            'password2': 'StrongPass123',
+        })
+        self.assertEqual(response.status_code, 302)
+        new_user = User.objects.get(username='new_admin')
+        self.assertEqual(new_user.role, 'admin')
+        self.assertTrue(new_user.is_approved)
+
+    def test_admin_can_create_manager_user(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.admin_register_url, {
+            'username': 'new_mgr',
+            'email': 'newmgr@example.com',
+            'role': 'manager',
+            'password1': 'StrongPass123',
+            'password2': 'StrongPass123',
+        })
+        self.assertEqual(response.status_code, 302)
+        new_user = User.objects.get(username='new_mgr')
+        self.assertEqual(new_user.role, 'manager')
+        self.assertTrue(new_user.is_approved)
+
+    # -- self-registration always yields a non-approved, non-admin user --
+    def test_self_registration_does_not_create_admin(self):
+        response = self.client.post(self.register_url, {
+            'username': 'selfregistered',
+            'email': 'selfreg@example.com',
+            'role': 'cashier',
+            'password1': 'StrongPass123',
+            'password2': 'StrongPass123',
+        })
+        self.assertEqual(response.status_code, 302)
+        new_user = User.objects.get(username='selfregistered')
+        self.assertNotEqual(new_user.role, 'admin')
+        self.assertFalse(new_user.is_approved)
