@@ -1,0 +1,114 @@
+## PROJECT PROMPT
+ 
+You are an expert full-stack Django developer. Build a complete, production-ready **Inventory, Sales, and Supplier Management System for Small Businesses**. Follow every requirement below precisely. Work incrementally, module by module, and after each module runs and passes basic tests before moving to the next.
+ 
+### 1. Tech Stack (mandatory)
+- **Backend:** Python 3.11+, Django 5.x, Django REST Framework (optional, for any AJAX/API endpoints)
+- **Database:** PostgreSQL (default) — use `django-environ` so it can fall back to MySQL via env vars
+- **Frontend:** Django Templates + HTML5, CSS3, Bootstrap 5, vanilla JavaScript (+ Chart.js for dashboard charts)
+- **Auth:** Django's built-in auth system extended with custom `User` model and role-based permissions (Groups + Permissions or a `Role` field: Admin, Manager, Cashier, Inventory Staff)
+- **PDF/Excel:** `WeasyPrint` or `xhtml2pdf` for PDF receipts/reports; `openpyxl` for Excel exports
+- **Other libraries:** `django-crispy-forms` (crispy-bootstrap5) for forms, `django-filter` for filtering, `django-import-export` (optional), `python-barcode` or JS barcode scanner integration (e.g., `quagga.js` or `html5-qrcode`) for barcode-ready search
+- **Version control:** Git, with a clean commit history and a `.gitignore`
+- **Deployment target:** Render, Railway, or PythonAnywhere with `gunicorn` + `whitenoise`/`nginx`, environment-based settings (`settings/base.py`, `dev.py`, `prod.py`)
+### 2. Core Data Model (design full ERD, then implement)
+Build models for at minimum:
+- `User` (custom, with `role` field or Group-based roles)
+- `Category` (name, description, parent category optional)
+- `Product` (name, SKU/barcode, category FK, unit price, cost price, reorder level, expiration date, unit of measure, image, is_active)
+- `Supplier` (name, contact person, phone, email, address, payment terms)
+- `Customer` (name, contact info, optional — for walk-in vs registered)
+- `PurchaseOrder` (supplier FK, order date, expected delivery date, status: pending/partial/received/cancelled, created_by)
+- `PurchaseOrderItem` (PO FK, product FK, quantity ordered, unit cost)
+- `StockReceipt` / `GoodsReceivedNote` (PO FK, received date, received_by, items with quantity received vs ordered — supports partial delivery)
+- `Sale` / `Order` (date, cashier FK, customer FK optional, payment method, subtotal, tax, discount, total, status)
+- `SaleItem` (sale FK, product FK, quantity, unit price at time of sale, subtotal)
+- `Payment` (sale FK, amount, method: cash/card/gcash/etc., reference number, change given)
+- `SupplierPayment` (supplier FK, PO FK, amount, date, method, status: paid/partial/pending)
+- `StockMovement` / `InventoryLog` (product FK, type: sale/purchase/adjustment/return, quantity change, resulting stock level, reference, timestamp) — this is the audit trail for inventory
+- `Alert` (type: low_stock/expiring/expired, product FK, message, is_resolved, created_at)
+- `ActivityLog` / `AuditTrail` (user FK, action, model affected, object id, timestamp, before/after snapshot if feasible)
+Design and document the **ERD**, **use-case diagram**, **data-flow diagram**, and **system architecture diagram** (can generate as Mermaid `.mmd` files or draw.io-compatible XML, plus exported PNGs) and place them in a `/docs/diagrams/` folder.
+ 
+### 3. Modules & Required Functionality
+ 
+**A. Authentication & Authorization**
+- Login/logout, password reset, role-based dashboards and menu visibility
+- Roles: Admin (full access), Manager (reports, inventory, suppliers), Cashier (POS only), Inventory Staff (products, stock, PO)
+- Enforce permission checks at both the view level (decorators/mixins) and the template level (hide unauthorized actions)
+**B. Product & Category Management**
+- Full CRUD with validation (unique SKU/barcode, non-negative prices, reorder level ≥ 0)
+- Category CRUD, optional nested categories
+- Search, filter (by category, stock status, supplier), sort, and paginate product list
+- Barcode field with barcode image generation and barcode scanner input support on POS and product search
+**C. Supplier Management**
+- CRUD for suppliers, link products to preferred suppliers
+- Supplier payment monitoring: track outstanding balance per supplier, payment history, due dates, partial payments
+**D. Purchase Order & Stock Receiving**
+- Create PO with multiple line items, select supplier, expected delivery date
+- PO status workflow: Draft → Sent → Partially Received → Received → Closed/Cancelled
+- Stock receiving screen: match received quantities against ordered quantities, auto-update inventory stock levels and create `StockMovement` entries on receipt
+- Flag discrepancies (short/over delivery)
+**E. Point-of-Sale (POS) Module**
+- Fast, single-screen POS interface: product search (name/SKU/barcode scan), add to cart, adjust quantity, apply discount, select payment method, compute change
+- Automatic stock deduction on sale completion (wrapped in a DB transaction to prevent overselling; validate stock availability before confirming sale)
+- Support multiple payment methods and split/partial payment if required
+- Generate a printable receipt (PDF and/or print-friendly HTML view) immediately after sale
+- Handle returns/voids with proper stock and audit trail reversal
+**F. Inventory Monitoring & Alerts**
+- Real-time stock level view per product/location
+- Low-stock alert when quantity ≤ reorder level
+- Expiration alert for products nearing/at/past expiration date (configurable threshold, e.g., 30/15/7 days)
+- Alerts dashboard/notification badge in the nav; mark alerts as resolved
+- Manual stock adjustment feature (with reason code) for damages, losses, corrections — logged in `StockMovement`
+**G. Sales & Profit Analytics Dashboard**
+- Summary cards: today's sales, today's profit, total transactions, low-stock count, pending POs
+- Charts (Chart.js): sales trend (daily/weekly/monthly line/bar chart), top-selling products, sales by category, profit margin trend
+- Filterable by date range
+**H. Reports (Printable PDF/Excel)**
+- Daily, weekly, and monthly sales reports
+- Inventory valuation and stock movement reports
+- Supplier payment/outstanding balance report
+- Profit & loss summary
+- All reports exportable as PDF and Excel, and viewable on-screen with filters/date range before export
+**I. Audit Trail & Security**
+- Log all create/update/delete actions with user, timestamp, and affected record
+- Admin-only audit log viewer with filters (user, date, action type)
+- Enforce CSRF protection, input validation/sanitization on all forms, password hashing (Django default), rate-limiting on login (e.g., `django-axes`), secure session settings, environment-based secrets (no hardcoded keys)
+- Data backup strategy: document a scheduled `pg_dump`/`mysqldump` backup routine (cron or management command) and note in the technical manual
+### 4. Frontend/UX Requirements
+- Responsive Bootstrap 5 layout (sidebar nav for desktop, collapsible offcanvas for mobile)
+- Consistent design system: reusable base template, navbar, sidebar, card components, alert/toast notifications for actions (success/error)
+- Data tables with client-side or server-side search, sort, filter, and pagination
+- Loading states and confirmation modals for destructive actions (delete, cancel PO, void sale)
+### 5. Testing & Quality
+- Unit tests (Django `TestCase`) for models, key business logic (stock deduction, PO receiving, payment calculations, alert triggers)
+- Integration tests for POS checkout flow and PO-to-stock-receipt flow
+- Provide a **test plan document** listing test cases, expected results, and pass/fail tracking
+- Include sample/seed data via a Django management command or fixtures for demo purposes
+### 6. Deliverables Checklist (produce all of these)
+1. Fully working Django project source code, organized into apps (e.g., `accounts`, `inventory`, `suppliers`, `sales`, `purchasing`, `reports`, `dashboard`, `core`)
+2. `requirements.txt` and `.env.example`
+3. Database migrations and seed/demo data command
+4. ERD, use-case diagram, data-flow diagram, system architecture diagram (`/docs/diagrams/`)
+5. User manual (`/docs/user_manual.md` or PDF) — how to use each role's features
+6. Technical manual (`/docs/technical_manual.md`) — setup, architecture, deployment, backup/restore steps
+7. Test plan and test results document (`/docs/test_plan.md`)
+8. README with setup instructions, screenshots, and feature list
+9. GitHub repository with clear commit history and `.gitignore`
+10. Deployed working application (provide deployment steps for Render/Railway/PythonAnywhere) with a live URL placeholder
+11. Slide outline or notes for a final presentation (`/docs/presentation_outline.md`)
+### 7. Build Order (follow this sequence)
+1. Project scaffolding, settings (dev/prod split), custom User model, base template, auth & roles
+2. Category, Product, Supplier, Customer CRUD + search/filter/pagination
+3. Purchase Order + Stock Receiving + StockMovement logging
+4. POS module with cart, checkout, stock deduction, receipt generation
+5. Alerts system (low stock, expiration) + notifications UI
+6. Dashboard with summary cards and Chart.js visualizations
+7. Reports module (PDF/Excel export, daily/weekly/monthly)
+8. Supplier payment monitoring
+9. Audit trail/activity logs across all modules
+10. Security hardening, tests, seed data, documentation, and deployment
+After each step, show me the code, explain what was implemented, and wait for confirmation before continuing to the next step.
+
+Work through the "Build Order" one step at a time and to run migrations/tests after each step.

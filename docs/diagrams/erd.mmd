@@ -1,0 +1,25 @@
+erDiagram
+    USER ||--o{ ACTIVITY_LOG : performs
+    USER ||--o{ SALE : cashiers
+    USER ||--o{ PURCHASE_ORDER : creates
+    USER ||--o{ STOCK_RECEIPT : receives
+
+    CATEGORY ||--o{ PRODUCT : contains
+    SUPPLIER ||--o{ PRODUCT : supplies
+    SUPPLIER ||--o{ PURCHASE_ORDER : places
+    SUPPLIER ||--o{ SUPPLIER_PAYMENT : receives
+    PURCHASE_ORDER ||--o{ PURCHASE_ORDER_ITEM : contains
+    PURCHASE_ORDER ||--o{ STOCK_RECEIPT : receives
+    PURCHASE_ORDER ||--o{ SUPPLIER_PAYMENT : billed_by
+
+    PRODUCT ||--o{ PURCHASE_ORDER_ITEM : ordered_in
+    PRODUCT ||--o{ STOCK_MOVEMENT : affects
+    PRODUCT ||--o{ ALERT : triggers
+    PRODUCT ||--o{ SALE_ITEM : sold_in
+
+    CUSTOMER ||--o{ SALE : buys
+    SALE ||--o{ SALE_ITEM : contains
+    SALE ||--o{ PAYMENT : settles
+
+    STOCK_RECEIPT ||--o{ STOCK_RECEIPT_ITEM : includes
+    PURCHASE_ORDER_ITEM ||--o{ STOCK_RECEIPT_ITEM : matched_to

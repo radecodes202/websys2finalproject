@@ -1,0 +1,14 @@
+flowchart LR
+    U[User] --> L[Login]
+    U --> P[Manage Products]
+    U --> S[Manage Suppliers]
+    U --> PO[Create Purchase Order]
+    U --> POS[POS Checkout]
+    U --> A[View Alerts]
+    U --> R[Generate Reports]
+    U --> GL[View Audit Log]
+
+    Admin --> FullAccess[Full Access]
+    Manager --> Dashboard[Reports and Inventory]
+    Cashier --> Checkout[Cashier POS]
+    InventoryStaff --> Stock[Products and Stock]

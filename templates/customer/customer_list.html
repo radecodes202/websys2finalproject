@@ -1,20 +1,26 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}Customer List{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Customer Management</h1>
-    <a href="{% url 'customer:customer-create' %}" class="btn btn-primary mb-3">Add New Customer</a>
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Customer Care</div>
+            <h1 class="page-title">Customer Management</h1>
+        </div>
+        <a href="{% url 'customer:customer-create' %}" class="btn btn-primary">Add New Customer</a>
+    </div>
 
-    <form method="get" class="mb-3">
-        <input type="text" name="search" placeholder="Search customers..." value="{{ request.GET.search }}" class="form-control me-2" style="width: 300px; display: inline-block;">
+    <form method="get" class="search-bar">
+        <input type="text" name="search" placeholder="Search customers..." value="{{ request.GET.search }}" class="form-control">
         <button type="submit" class="btn btn-outline-secondary">Search</button>
     </form>
 
     {% if customers %}
-    <table class="table table-striped">
+    <div class="table-shell">
+        <table class="table table-striped align-middle">
         <thead>
             <tr>
                 <th>Name</th>
@@ -33,7 +39,7 @@
                 <td>{{ customer.email|default:"-" }}</td>
                 <td>{{ customer.phone|default:"-" }}</td>
                 <td>{{ customer.city|default:"-" }}</td>
-                <td>
+                <td class="table-actions">
                     <a href="{% url 'customer:customer-update' customer.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
                     <a href="{% url 'customer:customer-delete' customer.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                 </td>
@@ -75,7 +81,8 @@
     {% endif %}
 
     {% else %}
-    <p>No customers found.</p>
+    <p class="empty-state">No customers found.</p>
     {% endif %}
+    </div>
 </div>
 {% endblock %}

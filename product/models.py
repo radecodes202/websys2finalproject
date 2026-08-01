@@ -1,9 +1,21 @@
+from datetime import timedelta
+from decimal import Decimal
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from category.models import Category
+from customer.models import Customer
+from supplier.models import Supplier
 
 
 class Product(models.Model):
+    expiration_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name=_('Expiration Date')
+    )
+
     name = models.CharField(
         max_length=200,
         verbose_name=_('Name')
@@ -60,3 +72,450 @@ class Product(models.Model):
     @property
     def is_low_stock(self):
         return self.quantity_in_stock <= self.reorder_level
+
+    def create_alerts(self):
+        alerts = []
+
+        if self.quantity_in_stock <= self.reorder_level:
+            alerts.append({
+                'type': 'low_stock',
+                'message': f'{self.name} is below its reorder level.',
+            })
+
+        if self.expiration_date:
+            remaining_days = (self.expiration_date - timezone.now().date()).days
+            if remaining_days <= 7:
+                alerts.append({
+                    'type': 'expiring',
+                    'message': f'{self.name} expires in {remaining_days} day(s).',
+                })
+
+        for alert_data in alerts:
+            Alert.objects.get_or_create(
+                product=self,
+                type=alert_data['type'],
+                defaults={'message': alert_data['message']},
+            )
+
+
+class Alert(models.Model):
+    TYPE_LOW_STOCK = 'low_stock'
+    TYPE_EXPIRING = 'expiring'
+    TYPE_EXPIRED = 'expired'
+
+    TYPE_CHOICES = [
+        (TYPE_LOW_STOCK, 'Low Stock'),
+        (TYPE_EXPIRING, 'Expiring'),
+        (TYPE_EXPIRED, 'Expired'),
+    ]
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='alerts',
+        verbose_name=_('Product')
+    )
+    type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        verbose_name=_('Type')
+    )
+    message = models.TextField(
+        verbose_name=_('Message')
+    )
+    is_resolved = models.BooleanField(
+        default=False,
+        verbose_name=_('Resolved')
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Created At')
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.product.name} - {self.type}'
+
+
+class PurchaseOrder(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_PARTIAL = 'partial'
+    STATUS_RECEIVED = 'received'
+    STATUS_CANCELLED = 'cancelled'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_PARTIAL, 'Partially Received'),
+        (STATUS_RECEIVED, 'Received'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.PROTECT,
+        related_name='purchase_orders',
+        verbose_name=_('Supplier')
+    )
+    order_date = models.DateField(
+        auto_now_add=True,
+        verbose_name=_('Order Date')
+    )
+    expected_delivery_date = models.DateField(
+        verbose_name=_('Expected Delivery Date')
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        verbose_name=_('Status')
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_purchase_orders',
+        verbose_name=_('Created By')
+    )
+
+    class Meta:
+        ordering = ['-order_date']
+
+    def __str__(self):
+        return f'PO-{self.pk} ({self.supplier.name})'
+
+
+class PurchaseOrderItem(models.Model):
+    purchase_order = models.ForeignKey(
+        PurchaseOrder,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name=_('Purchase Order')
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name='purchase_order_items',
+        verbose_name=_('Product')
+    )
+    quantity_ordered = models.PositiveIntegerField(
+        verbose_name=_('Quantity Ordered')
+    )
+    unit_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name=_('Unit Cost')
+    )
+
+    class Meta:
+        verbose_name = _('Purchase Order Item')
+        verbose_name_plural = _('Purchase Order Items')
+
+    def __str__(self):
+        return f'{self.product.name} x {self.quantity_ordered}'
+
+
+class StockReceipt(models.Model):
+    purchase_order = models.ForeignKey(
+        PurchaseOrder,
+        on_delete=models.CASCADE,
+        related_name='stock_receipts',
+        verbose_name=_('Purchase Order')
+    )
+    received_date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Received Date')
+    )
+    received_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='received_stock_receipts',
+        verbose_name=_('Received By')
+    )
+
+    class Meta:
+        ordering = ['-received_date']
+
+    def __str__(self):
+        return f'Stock Receipt {self.pk}'
+
+    def receive(self):
+        total_received = 0
+        for item in self.items.all():
+            quantity_received = item.quantity_received
+            if quantity_received < 0:
+                raise ValueError('Received quantity cannot be negative.')
+
+            product = item.purchase_order_item.product
+            product.quantity_in_stock += quantity_received
+            product.save(update_fields=['quantity_in_stock'])
+
+            StockMovement.objects.create(
+                product=product,
+                type='purchase',
+                quantity_change=quantity_received,
+                resulting_stock_level=product.quantity_in_stock,
+                reference=f'StockReceipt-{self.pk}',
+            )
+            total_received += quantity_received
+
+        if total_received == 0:
+            self.purchase_order.status = PurchaseOrder.STATUS_PENDING
+        elif total_received < self.purchase_order.items.count() and total_received > 0:
+            self.purchase_order.status = PurchaseOrder.STATUS_PARTIAL
+        else:
+            self.purchase_order.status = PurchaseOrder.STATUS_RECEIVED
+        self.purchase_order.save(update_fields=['status'])
+
+
+class StockReceiptItem(models.Model):
+    stock_receipt = models.ForeignKey(
+        StockReceipt,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name=_('Stock Receipt')
+    )
+    purchase_order_item = models.ForeignKey(
+        PurchaseOrderItem,
+        on_delete=models.PROTECT,
+        related_name='receipts',
+        verbose_name=_('Purchase Order Item')
+    )
+    quantity_received = models.PositiveIntegerField(
+        verbose_name=_('Quantity Received')
+    )
+
+    class Meta:
+        verbose_name = _('Stock Receipt Item')
+        verbose_name_plural = _('Stock Receipt Items')
+
+    def __str__(self):
+        return f'{self.purchase_order_item.product.name} x {self.quantity_received}'
+
+
+class StockMovement(models.Model):
+    MOVEMENT_TYPE_PURCHASE = 'purchase'
+    MOVEMENT_TYPE_SALE = 'sale'
+    MOVEMENT_TYPE_ADJUSTMENT = 'adjustment'
+    MOVEMENT_TYPE_RETURN = 'return'
+
+    MOVEMENT_TYPE_CHOICES = [
+        (MOVEMENT_TYPE_PURCHASE, 'Purchase'),
+        (MOVEMENT_TYPE_SALE, 'Sale'),
+        (MOVEMENT_TYPE_ADJUSTMENT, 'Adjustment'),
+        (MOVEMENT_TYPE_RETURN, 'Return'),
+    ]
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='stock_movements',
+        verbose_name=_('Product')
+    )
+    type = models.CharField(
+        max_length=20,
+        choices=MOVEMENT_TYPE_CHOICES,
+        default=MOVEMENT_TYPE_PURCHASE,
+        verbose_name=_('Type')
+    )
+    quantity_change = models.IntegerField(
+        verbose_name=_('Quantity Change')
+    )
+    resulting_stock_level = models.PositiveIntegerField(
+        verbose_name=_('Resulting Stock Level')
+    )
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_('Reference')
+    )
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Timestamp')
+    )
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f'{self.product.name} {self.type}'
+
+
+class Sale(models.Model):
+    STATUS_COMPLETED = 'completed'
+    STATUS_PENDING = 'pending'
+    STATUS_CANCELLED = 'cancelled'
+
+    STATUS_CHOICES = [
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_CANCELLED, 'Cancelled'),
+    ]
+
+    date = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Date')
+    )
+    cashier = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales',
+        verbose_name=_('Cashier')
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sales',
+        verbose_name=_('Customer')
+    )
+    payment_method = models.CharField(
+        max_length=20,
+        default='cash',
+        verbose_name=_('Payment Method')
+    )
+    subtotal = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name=_('Subtotal')
+    )
+    tax = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name=_('Tax')
+    )
+    discount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name=_('Discount')
+    )
+    total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name=_('Total')
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+        verbose_name=_('Status')
+    )
+
+    class Meta:
+        ordering = ['-date']
+
+    def complete_checkout(self):
+        for item in self.items.all():
+            if item.quantity > item.product.quantity_in_stock:
+                raise ValueError(f'Insufficient stock for {item.product.name}.')
+
+        for item in self.items.all():
+            item.product.quantity_in_stock -= item.quantity
+            item.product.save(update_fields=['quantity_in_stock'])
+            StockMovement.objects.create(
+                product=item.product,
+                type='sale',
+                quantity_change=-item.quantity,
+                resulting_stock_level=item.product.quantity_in_stock,
+                reference=f'Sale-{self.pk}',
+            )
+
+        self.status = self.STATUS_COMPLETED
+        self.save(update_fields=['status'])
+
+    def __str__(self):
+        return f'Sale {self.pk}'
+
+
+class SaleItem(models.Model):
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name=_('Sale')
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name='sale_items',
+        verbose_name=_('Product')
+    )
+    quantity = models.PositiveIntegerField(
+        verbose_name=_('Quantity')
+    )
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_('Unit Price')
+    )
+    subtotal = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_('Subtotal')
+    )
+
+    class Meta:
+        verbose_name = _('Sale Item')
+        verbose_name_plural = _('Sale Items')
+
+    def __str__(self):
+        return f'{self.product.name} x {self.quantity}'
+
+
+class Payment(models.Model):
+    METHOD_CASH = 'cash'
+    METHOD_CARD = 'card'
+    METHOD_GCASH = 'gcash'
+
+    METHOD_CHOICES = [
+        (METHOD_CASH, 'Cash'),
+        (METHOD_CARD, 'Card'),
+        (METHOD_GCASH, 'GCash'),
+    ]
+
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.CASCADE,
+        related_name='payments',
+        verbose_name=_('Sale')
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name=_('Amount')
+    )
+    method = models.CharField(
+        max_length=20,
+        choices=METHOD_CHOICES,
+        default=METHOD_CASH,
+        verbose_name=_('Method')
+    )
+    reference_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name=_('Reference Number')
+    )
+    change_given = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name=_('Change Given')
+    )
+
+    class Meta:
+        ordering = ['-sale__date']
+
+    def __str__(self):
+        return f'Payment {self.pk} for Sale {self.sale_id}'

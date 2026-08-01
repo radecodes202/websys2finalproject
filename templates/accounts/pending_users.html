@@ -1,0 +1,64 @@
+﻿{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Pending Users{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Accounts</div>
+            <h1 class="page-title">Pending User Approvals</h1>
+        </div>
+    </div>
+
+    <div class=\"row\">
+        <div class=\"col-md-12\">
+            <div class="table-shell">
+                <div class=\"card-body\">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class=\"alert alert-{{ message.tags }} alert-dismissible fade show\" role=\"alert\">
+                                {{ message }}
+                                <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\" aria-label=\"Close\"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    {% if pending_users %}
+                        <table class=\"table table-striped\">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Date Requested</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in pending_users %}
+                                <tr>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>{{ user.get_role_display }}</td>
+                                    <td>{{ user.date_joined }}</td>
+                                    <td>
+                                        <form method=\"post\" style=\"display:inline;\">
+                                            {% csrf_token %}
+                                            <input type=\"hidden\" name=\"user_id\" value=\"{{ user.id }}\">
+                                            <button type=\"submit\" class=\"btn btn-sm btn-success\">Approve</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="empty-state">No users pending approval.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

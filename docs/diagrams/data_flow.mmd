@@ -1,0 +1,10 @@
+flowchart TD
+    A[Supplier Order Request] --> B[Purchase Order]
+    B --> C[Stock Receipt]
+    C --> D[Inventory Update]
+    D --> E[Stock Movement Log]
+    F[POS Sale] --> G[Sale Record]
+    G --> H[Payment Capture]
+    H --> I[Inventory Deduction]
+    I --> J[Alert Evaluation]
+    J --> K[Dashboard + Reports]

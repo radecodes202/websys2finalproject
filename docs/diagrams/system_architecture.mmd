@@ -1,0 +1,15 @@
+flowchart LR
+    Browser[Browser UI] --> Django[Django Web App]
+    Django --> Auth[Accounts / Auth]
+    Django --> Inventory[Product + Category + Supplier + Customer]
+    Django --> Purchase[Purchase Order + Receiving]
+    Django --> POS[Sales / POS]
+    Django --> Reports[Reports + Dashboard]
+    Django --> Audit[Activity Log]
+
+    Auth --> DB[(SQLite / PostgreSQL)]
+    Inventory --> DB
+    Purchase --> DB
+    POS --> DB
+    Reports --> DB
+    Audit --> DB

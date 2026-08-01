@@ -7,9 +7,70 @@
     {% load static %}
     {% load crispy_forms_tags %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/theme.css' %}">
 </head>
-<body>
-    {% block content %}{% endblock %}
+<body class="app-body">
+    <div class="app-shell">
+        <aside class="app-sidebar">
+            <div class="brand-block">
+                <span class="brand-badge">IMS</span>
+                <div>
+                    <div class="brand-title">Inventory System</div>
+                    <div class="brand-subtitle">Small Business Suite</div>
+                </div>
+            </div>
+
+            {% if request.user.is_authenticated %}
+            <nav class="sidebar-nav">
+                <a href="{% url 'home' %}" class="nav-link">Dashboard</a>
+
+                {# Inventory management links — Admin, Manager, Inventory Staff #}
+                {% if request.user.is_admin or request.user.is_manager or request.user.is_inventory_staff %}
+                <a href="{% url 'category:category-list' %}" class="nav-link">Categories</a>
+                <a href="{% url 'product:product-list' %}" class="nav-link">Products</a>
+                <a href="{% url 'supplier:supplier-list' %}" class="nav-link">Suppliers</a>
+                {% endif %}
+
+                {# Customer / sales links — Admin, Manager, Cashier #}
+                {% if request.user.is_admin or request.user.is_manager or request.user.is_cashier %}
+                <a href="{% url 'customer:customer-list' %}" class="nav-link">Customers</a>
+                {% endif %}
+
+                {# Reports — Admin, Manager #}
+                {% if request.user.is_admin or request.user.is_manager %}
+                <a href="{% url 'reports:sales-report' %}" class="nav-link">Reports</a>
+                {% endif %}
+
+                {# Pending users — Admin only #}
+                {% if request.user.is_admin %}
+                <a href="{% url 'accounts:pending_users' %}" class="nav-link">Pending Users</a>
+                {% endif %}
+            </nav>
+            {% endif %}
+        </aside>
+
+        <main class="app-main">
+            <nav class="topbar">
+                <div>
+                    <span class="topbar-label">Welcome</span>
+                    <strong>{{ request.user.username|default:'Guest' }}</strong>
+                </div>
+                <div class="d-flex gap-2">
+                    {% if request.user.is_authenticated %}
+                        <a href="{% url 'accounts:logout' %}" class="btn btn-outline-light btn-sm">Logout</a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="btn btn-outline-light btn-sm">Login</a>
+                    {% endif %}
+                </div>
+            </nav>
+
+            <div class="content-wrap">
+                {% include 'includes/messages.html' %}
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

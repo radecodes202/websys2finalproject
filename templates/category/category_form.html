@@ -1,16 +1,35 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
 {% block title %}{% if object %}Edit Category{% else %}Add Category{% endif %}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>{% if object %}Edit Category{% else %}Add New Category{% endif %}</h1>
-    <form method="post" novalidate>
-        {% csrf_token %}
-        {{ form|crispy }}
-        <button type="submit" class="btn btn-primary">Save</a>
-        <a href="{% url 'category:category-list' %}" class="btn btn-secondary">Cancel</a>
-    </form>
+<div class="page-surface form-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Catalog</div>
+            <h1 class="page-title">{% if object %}Edit Category{% else %}Add New Category{% endif %}</h1>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class=\"card shadow-sm\">
+                <div class=\"card-header bg-primary text-white\">
+                    <h4 class=\"mb-0\">{% if object %}Edit Category{% else %}Add New Category{% endif %}</h4>
+                </div>
+                <div class=\"card-body\">
+                    <form method=\"post\" novalidate>
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <a href="{% url 'category:category-list' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

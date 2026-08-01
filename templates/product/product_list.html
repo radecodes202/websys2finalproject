@@ -1,21 +1,27 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load crispy_forms_tags %}
 {% load static %}
 
 {% block title %}Product List{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1>Product Management</h1>
-    <a href="{% url 'product:product-create' %}" class="btn btn-primary mb-3">Add New Product</a>
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Inventory</div>
+            <h1 class="page-title">Product Management</h1>
+        </div>
+        <a href="{% url 'product:product-create' %}" class="btn btn-primary">Add New Product</a>
+    </div>
 
-    <form method="get" class="mb-3">
-        <input type="text" name="search" placeholder="Search products..." value="{{ request.GET.search }}" class="form-control me-2" style="width: 300px; display: inline-block;">
+    <form method="get" class="search-bar">
+        <input type="text" name="search" placeholder="Search products..." value="{{ request.GET.search }}" class="form-control">
         <button type="submit" class="btn btn-outline-secondary">Search</button>
     </form>
 
     {% if products %}
-    <table class="table table-striped">
+    <div class="table-shell">
+        <table class="table table-striped align-middle">
         <thead>
             <tr>
                 <th>Name</th>
@@ -38,7 +44,7 @@
                 <td>{{ product.quantity_in_stock }}</td>
                 <td>{{ product.reorder_level }}</td>
                 <td>{{ product.is_active|yesno:"Yes,No" }}</td>
-                <td>
+                <td class="table-actions">
                     <a href="{% url 'product:product-update' product.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
                     <a href="{% url 'product:product-delete' product.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                 </td>
@@ -80,7 +86,8 @@
     {% endif %}
 
     {% else %}
-    <p>No products found.</p>
+    <p class="empty-state">No products found.</p>
     {% endif %}
+    </div>
 </div>
 {% endblock %}

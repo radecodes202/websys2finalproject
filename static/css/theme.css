@@ -1,0 +1,253 @@
+:root {
+    --bg-soft: #f4f7fb;
+    --panel: #ffffff;
+    --ink: #1b2740;
+    --primary: #3458d9;
+    --secondary: #6c757d;
+    --success: #21a67a;
+    --warning: #f4a623;
+    --danger: #d94d5c;
+    --border: #dce4ef;
+    --shadow: 0 8px 28px rgba(21, 36, 75, 0.12);
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(180deg, #eef4ff 0%, #f8fafd 100%);
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.app-body {
+    min-height: 100vh;
+}
+
+.app-shell {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 100vh;
+}
+
+.app-sidebar {
+    background: #10213d;
+    color: #ffffff;
+    padding: 24px 18px;
+}
+
+.brand-block {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.brand-badge {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #7c99ff, #5274ff);
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+}
+
+.brand-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.brand-subtitle {
+    font-size: 0.78rem;
+    opacity: 0.75;
+}
+
+.sidebar-nav {
+    display: grid;
+    gap: 10px;
+}
+
+.sidebar-nav .nav-link {
+    color: #dfe8ff;
+    text-decoration: none;
+    padding: 10px 12px;
+    border-radius: 10px;
+    transition: background 0.2s ease;
+}
+
+.sidebar-nav .nav-link:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.app-main {
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    background: #ffffff;
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+}
+
+.topbar-label {
+    display: block;
+    font-size: 0.72rem;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.content-wrap {
+    padding: 24px;
+}
+
+.page-surface {
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    padding: 24px;
+}
+
+.page-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.page-kicker {
+    color: var(--primary);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.search-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.search-bar .form-control {
+    max-width: 320px;
+}
+
+.table-shell {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.table-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.empty-state {
+    padding: 18px;
+    color: #5b6577;
+}
+
+.card,
+.table,
+.form-control,
+.form-select,
+.btn {
+    border-radius: 14px !important;
+}
+
+.card {
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    background: var(--panel);
+}
+
+.card-header {
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+}
+
+.table {
+    background: var(--panel);
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table thead th {
+    background: #edf3ff;
+    color: #234;
+    font-size: 0.9rem;
+}
+
+.table tbody tr:hover {
+    background: #f7faff;
+}
+
+.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-danger {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+.page-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 18px;
+}
+
+.form-surface {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.confirm-text {
+    font-size: 1rem;
+    margin-bottom: 20px;
+    color: #4a566b;
+}
+
+.dashboard-card {
+    border: 0;
+    border-radius: 18px;
+    box-shadow: var(--shadow);
+}
+
+@media (max-width: 960px) {
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .app-sidebar {
+        padding-bottom: 8px;
+    }
+
+    .sidebar-nav {
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+}
