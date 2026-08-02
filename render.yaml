@@ -9,13 +9,13 @@ services:
       - key: DJANGO_ENV
         value: "prod"
       - key: SECRET_KEY
-        value: django-insecure-change-me
+        value: 7ssgzad3r=pd5x#(f-^pcbw==+#4+5s_-!v7np1(39(kr)h(5=
       - key: DEBUG
         value: "False"
       - key: USE_SQLITE
         value: "False"
       - key: ALLOWED_HOSTS
-        value: "*"
+        value: "websys2finalproject-group3.onrender.com"
       - key: DB_ENGINE
         value: django.db.backends.postgresql
       - key: DB_NAME
