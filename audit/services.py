@@ -26,6 +26,7 @@ from decimal import Decimal
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models.fields.files import FieldFile
 
 from .current import get_current_ip, get_current_request, get_current_user, get_current_user_agent
 from .models import AuditLog
@@ -50,12 +51,23 @@ def _serialize_value(value):
     * Dates / datetimes / times → ISO-format strings
     * ``Decimal`` → ``str`` (preserves precision, avoids float rounding)
     * Django model instances (FKs) → ``"id - str(obj)"``
+    * Uploaded files (e.g. ``ImageField``) → their stored file name
     * QuerySets / iterables → list of serialized items
     * Everything else → returned as-is (Django's JSONField will attempt
       serialisation and fall back to ``str`` via the DjangoJSONEncoder).
     """
     if value is None:
         return None
+
+    if isinstance(value, FieldFile):
+        return value.name or None
+
+    # Best-effort conversion for any object that JSON cannot encode.
+    if hasattr(value, '__dict__') and not isinstance(value, (str, int, float, bool)):
+        try:
+            return str(value)
+        except Exception:  # noqa: BLE001
+            return None
 
     # Django model instance (FK / one-to-one) — store "id - str(obj)".
     if isinstance(value, models.Model):

@@ -238,7 +238,7 @@ class RoleBasedAccessTests(TestCase):
         cls.supplier_url = reverse('supplier:supplier-list')
         cls.customer_url = reverse('customer:customer-list')
         cls.reports_url = reverse('reports:sales-report')
-        cls.pending_url = reverse('accounts:pending_users')
+        cls.user_management_url = reverse('accounts:user-management')
         cls.home_url = reverse('home')
 
     # ------------------------------------------------------------------
@@ -247,7 +247,7 @@ class RoleBasedAccessTests(TestCase):
     def test_anonymous_user_redirected_from_all_protected_pages(self):
         for url in [self.home_url, self.product_url, self.category_url,
                      self.supplier_url, self.customer_url, self.reports_url,
-                     self.pending_url]:
+                     self.user_management_url]:
             response = self.client.get(url)
             self.assertEqual(response.status_code, 302, f"Expected redirect for {url}")
             self.assertRedirects(response, f"{reverse('accounts:login')}?next={url}")
@@ -318,23 +318,199 @@ class RoleBasedAccessTests(TestCase):
             self.assertEqual(response.status_code, 403)
 
     # ------------------------------------------------------------------
-    # Pending users – admin only
+    # User Management – admin only
     # ------------------------------------------------------------------
-    def test_pending_users_accessible_to_admin_only(self):
+    def test_user_management_accessible_to_admin_only(self):
         self.client.force_login(self.admin)
-        response = self.client.get(self.pending_url)
+        response = self.client.get(self.user_management_url)
         self.assertEqual(response.status_code, 200)
 
-    def test_pending_users_forbidden_to_non_admin(self):
-        for user in [self.manager, self.cashier, self.inventory]:
-            self.client.force_login(user)
-            response = self.client.get(self.pending_url)
-            self.assertEqual(response.status_code, 403)
+    def test_user_management_accessible_to_manager(self):
+        self.client.force_login(self.manager)
+        response = self.client.get(self.user_management_url)
+        self.assertEqual(response.status_code, 200)
 
 
 # ------------------------------------------------------------------
 # Admin-only user registration (including admin role)
 # ------------------------------------------------------------------
+class UserManagementTests(TestCase):
+    """Admins can manage other users while non-admins are blocked."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user(
+            username='admin_user', email='admin@example.com',
+            password='StrongPass123', role='admin', is_approved=True,
+        )
+        cls.cashier = User.objects.create_user(
+            username='cashier_user', email='cashier@example.com',
+            password='StrongPass123', role='cashier', is_approved=True,
+        )
+        cls.pending = User.objects.create_user(
+            username='pending_user', email='pending@example.com',
+            password='StrongPass123', role='cashier', is_approved=False,
+        )
+        cls.management_url = reverse('accounts:user-management')
+
+    def test_admin_can_access_user_management_page(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(self.management_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'accounts/user_management.html')
+
+    def test_non_admin_cannot_access_user_management_page(self):
+        self.client.force_login(self.cashier)
+        response = self.client.get(self.management_url)
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_can_approve_pending_user_from_management(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': self.pending.id,
+            'action': 'approve',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.pending.refresh_from_db()
+        self.assertTrue(self.pending.is_approved)
+
+    def test_admin_can_reject_pending_user_from_management(self):
+        self.client.force_login(self.admin)
+        pending_id = self.pending.id
+        response = self.client.post(self.management_url, {
+            'user_id': self.pending.id,
+            'action': 'reject',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(User.objects.filter(id=pending_id).exists())
+
+    def test_pending_users_filter_returns_only_unapproved(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(self.management_url, {'status': 'pending'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.pending.username, response.content.decode())
+        self.assertNotIn(self.cashier.username, response.content.decode())
+
+    def test_active_users_filter_excludes_pending(self):
+        self.client.force_login(self.admin)
+        response = self.client.get(self.management_url, {'status': 'active'})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(self.pending.username, response.content.decode())
+        self.assertIn(self.cashier.username, response.content.decode())
+
+    def test_admin_can_change_role_of_other_user_via_edit(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': self.cashier.id,
+            'action': 'edit',
+            'username': self.cashier.username,
+            'first_name': self.cashier.first_name,
+            'last_name': self.cashier.last_name,
+            'email': self.cashier.email,
+            'role': 'manager',
+            'is_active': 'true',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.cashier.refresh_from_db()
+        self.assertEqual(self.cashier.role, 'manager')
+
+    def test_admin_cannot_change_own_role(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': self.admin.id,
+            'action': 'change_role',
+            'role': 'cashier',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.role, 'admin')
+
+    def test_admin_cannot_approve_own_account(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': self.admin.id,
+            'action': 'approve',
+        })
+        self.assertEqual(response.status_code, 302)
+
+    def test_admin_cannot_deactivate_own_account(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': self.admin.id,
+            'action': 'toggle_active',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_active)
+
+    def test_admin_can_edit_other_user(self):
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': self.cashier.id,
+            'action': 'edit',
+            'username': 'cashier_updated',
+            'first_name': 'Jane',
+            'last_name': 'Doe',
+            'email': 'jane@example.com',
+            'role': 'manager',
+            'is_active': 'true',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.cashier.refresh_from_db()
+        self.assertEqual(self.cashier.username, 'cashier_updated')
+        self.assertEqual(self.cashier.email, 'jane@example.com')
+        self.assertEqual(self.cashier.role, 'manager')
+
+    def test_manager_cannot_edit_admin(self):
+        manager = User.objects.create_user(
+            username='manager_user', email='mgr@example.com',
+            password='StrongPass123', role='manager', is_approved=True,
+        )
+        self.client.force_login(manager)
+        response = self.client.post(self.management_url, {
+            'user_id': self.admin.id,
+            'action': 'edit',
+            'username': 'admin_updated',
+            'email': 'admin@example.com',
+            'role': 'admin',
+            'is_active': 'true',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.username, 'admin_user')
+
+    def test_delete_blocked_when_user_has_sales_history(self):
+        sale = Sale.objects.create(
+            cashier=self.cashier,
+            payment_method='cash',
+            subtotal=Decimal('10.00'),
+            tax=Decimal('0.00'),
+            discount=Decimal('0.00'),
+            total=Decimal('10.00'),
+            status='completed',
+        )
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': self.cashier.id,
+            'action': 'delete',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(id=self.cashier.id).exists())
+
+    def test_delete_succeeds_when_no_history(self):
+        no_history = User.objects.create_user(
+            username='fresh_user', email='fresh@example.com',
+            password='StrongPass123', role='cashier', is_approved=True,
+        )
+        self.client.force_login(self.admin)
+        response = self.client.post(self.management_url, {
+            'user_id': no_history.id,
+            'action': 'delete',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(User.objects.filter(id=no_history.id).exists())
+
+
 class AdminRoleRegistrationTests(TestCase):
     """Verify that:
     * the public register form does **not** expose the ``admin`` role,

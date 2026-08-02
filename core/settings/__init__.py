@@ -1,11 +1,9 @@
+import os
 from .base import *
 
-try:
-    from .dev import *  # noqa: F401,F403
-except ImportError:
-    pass
+DJANGO_ENV = os.environ.get("DJANGO_ENV", "dev")
 
-try:
-    from .prod import *  # noqa: F401,F403
-except ImportError:
-    pass
+if DJANGO_ENV == "prod":
+    from .prod import *
+else:
+    from .dev import *

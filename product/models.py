@@ -40,6 +40,45 @@ class Product(models.Model):
         unique=True,
         verbose_name=_('SKU')
     )
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name=_('Code')
+    )
+    barcode = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name=_('Barcode')
+    )
+    cost_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        verbose_name=_('Cost Price')
+    )
+    unit_of_measure = models.CharField(
+        max_length=50,
+        default='pcs',
+        verbose_name=_('Unit of Measure')
+    )
+    image = models.ImageField(
+        upload_to='products/',
+        blank=True,
+        null=True,
+        verbose_name=_('Image')
+    )
+    preferred_supplier = models.ForeignKey(
+        Supplier,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='preferred_products',
+        verbose_name=_('Preferred Supplier')
+    )
     unit_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -191,6 +230,48 @@ class PurchaseOrder(models.Model):
     def __str__(self):
         return f'PO-{self.pk} ({self.supplier.name})'
 
+    @property
+    def total_cost(self):
+        """Sum of every line item (quantity ordered x unit cost)."""
+        return sum((item.total_cost for item in self.items.all()), Decimal('0.00'))
+
+    @property
+    def total_items(self):
+        """Number of line items on this purchase order."""
+        return self.items.count()
+
+    def can_cancel(self):
+        """A purchase order may only be cancelled before any goods are received."""
+        return self.status == self.STATUS_PENDING
+
+    def can_be_received(self):
+        """Goods may be received into a pending or partially-received PO."""
+        return self.status in (self.STATUS_PENDING, self.STATUS_PARTIAL)
+
+    def cancel(self, cancelled_by=None):
+        """Transition the PO to ``cancelled`` and log the status change.
+
+        Only ``pending`` orders can be cancelled — once goods have been
+        (partially) received the inventory has already moved, so cancellation
+        is refused to avoid leaving the stock ledger inconsistent.
+        """
+        if not self.can_cancel():
+            raise ValueError('Only purchase orders in "pending" status can be cancelled.')
+        old_status = self.status
+        self.status = self.STATUS_CANCELLED
+        self.save(update_fields=['status'])
+        log_activity(
+            user=cancelled_by,
+            action=AuditLog.ACTION_STATUS_CHANGE,
+            instance=self,
+            description=(
+                f'Purchase Order PO-{self.pk} was cancelled '
+                f'(status changed from "{old_status}" to "{self.STATUS_CANCELLED}").'
+            ),
+            changes={'status': {'old': old_status, 'new': self.STATUS_CANCELLED}},
+            severity=AuditLog.SEVERITY_WARNING,
+        )
+
 
 class PurchaseOrderItem(models.Model):
     purchase_order = models.ForeignKey(
@@ -221,6 +302,26 @@ class PurchaseOrderItem(models.Model):
 
     def __str__(self):
         return f'{self.product.name} x {self.quantity_ordered}'
+
+    @property
+    def total_cost(self):
+        """Line total = ordered quantity x unit cost."""
+        return self.quantity_ordered * self.unit_cost
+
+    @property
+    def received_quantity(self):
+        """Quantity already received for this line across all receipts."""
+        return sum((r.quantity_received for r in self.receipts.all()), 0)
+
+    @property
+    def remaining_quantity(self):
+        """Quantity still outstanding before this line is fully received."""
+        return max(self.quantity_ordered - self.received_quantity, 0)
+
+    @property
+    def is_fully_received(self):
+        """True once the received quantity meets or exceeds the ordered quantity."""
+        return self.received_quantity >= self.quantity_ordered
 
 
 class StockReceipt(models.Model):
@@ -292,9 +393,17 @@ class StockReceipt(models.Model):
                     severity=AuditLog.SEVERITY_INFO,
                 )
 
-            if total_ordered == 0:
+            # Status is derived from the *whole* purchase order (ordered vs
+            # received across every receipt), not just this receipt, so that
+            # partial deliveries spread across multiple receipts are accounted
+            # for correctly.
+            po = self.purchase_order
+            po_total_ordered = sum((i.quantity_ordered for i in po.items.all()), 0)
+            po_total_received = sum((i.received_quantity for i in po.items.all()), 0)
+
+            if po_total_ordered == 0:
                 new_status = PurchaseOrder.STATUS_PENDING
-            elif total_received < total_ordered:
+            elif po_total_received < po_total_ordered:
                 new_status = PurchaseOrder.STATUS_PARTIAL
             else:
                 new_status = PurchaseOrder.STATUS_RECEIVED

@@ -206,6 +206,60 @@ class SaleCheckoutTests(TestCase):
         self.assertFalse(StockMovement.objects.exists())
 
 
+class POSCheckoutTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='cashier_user',
+            email='cashier@example.com',
+            password='StrongPass123',
+            role='cashier',
+            is_approved=True,
+        )
+        self.category = Category.objects.create(name='Hardware', description='Hardware supplies')
+        self.product = Product.objects.create(
+            name='Hammer',
+            description='Standard hammer',
+            category=self.category,
+            sku='SKU-004',
+            unit_price=Decimal('25.00'),
+            quantity_in_stock=10,
+            reorder_level=2,
+            is_active=True,
+        )
+        self.client.force_login(self.user)
+
+    def test_pos_page_renders_for_cashier(self):
+        response = self.client.get(reverse('product:pos'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Hammer')
+
+    def test_pos_checkout_creates_sale_and_receipt(self):
+        add_response = self.client.post(reverse('product:pos'), {
+            'action': 'add_to_cart',
+            'product_id': self.product.pk,
+            'quantity': 2,
+        })
+        self.assertEqual(add_response.status_code, 302)
+
+        checkout_response = self.client.post(reverse('product:pos'), {
+            'action': 'checkout',
+            'payment_method': 'cash',
+            'amount_tendered': '60.00',
+            'discount': '0.00',
+        })
+        self.assertEqual(checkout_response.status_code, 302)
+
+        sale = Sale.objects.get(status='completed')
+        self.assertEqual(sale.items.count(), 1)
+        self.assertEqual(sale.payments.count(), 1)
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.quantity_in_stock, 8)
+
+        receipt_response = self.client.get(reverse('product:receipt', args=[sale.pk]))
+        self.assertEqual(receipt_response.status_code, 200)
+        self.assertContains(receipt_response, 'Receipt')
+
+
 class AlertTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -272,3 +326,42 @@ class ProductCRUDTests(TestCase):
         list_response = self.client.get(reverse('product:product-list'))
         self.assertEqual(list_response.status_code, 200)
         self.assertContains(list_response, 'Hammer')
+
+    def test_product_detail_and_filtering_support_new_fields(self):
+        supplier = Supplier.objects.create(
+            name='Acme Supplies',
+            contact_person='Jane Doe',
+            email='supplier@example.com',
+            phone='123456789',
+            address='123 Main St',
+            city='Manila',
+            postal_code='1000',
+            country='Philippines',
+        )
+        parent_category = Category.objects.create(name='Tools', description='Tooling')
+        child_category = Category.objects.create(name='Hand Tools', description='Hand tools', parent=parent_category)
+
+        product = Product.objects.create(
+            name='Hammer',
+            description='Standard hammer',
+            category=child_category,
+            sku='SKU-002',
+            unit_price=Decimal('25.00'),
+            cost_price=Decimal('18.00'),
+            unit_of_measure='pcs',
+            code='HAM-001',
+            barcode='1234567890123',
+            preferred_supplier=supplier,
+            quantity_in_stock=1,
+            reorder_level=2,
+            is_active=True,
+        )
+
+        detail_response = self.client.get(reverse('product:product-detail', args=[product.pk]))
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, 'HAM-001')
+
+        filter_response = self.client.get(reverse('product:product-list'), {'category': child_category.pk, 'stock_status': 'low'})
+        self.assertEqual(filter_response.status_code, 200)
+        self.assertContains(filter_response, 'Hammer')
+        self.assertContains(filter_response, 'Hand Tools')

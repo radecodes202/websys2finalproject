@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Receive Stock - PO-{{ po.pk }}{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Procurement</div>
+            <h1 class="page-title">Receive Stock - PO-{{ po.pk }}</h1>
+        </div>
+        <a href="{% url 'purchase:purchase-order-detail' po.pk %}" class="btn btn-secondary">Back to PO Details</a>
+    </div>
+
+    <div class="alert alert-info">
+        <h5 class="alert-heading">Purchase Order Information</h5>
+        <p class="mb-1"><strong>Supplier:</strong> {{ po.supplier.name }}</p>
+        <p class="mb-0"><strong>Order Date:</strong> {{ po.order_date|date:"M d, Y" }}</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Enter Received Quantities</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Enter the quantity received for each product. The maximum allowed for each item is shown below.</p>
+                
+                {% for field in form %}
+                {% if field.name != 'csrfmiddlewaretoken' %}
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">{{ field.label }}</label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   name="{{ field.name }}" 
+                                   class="form-control" 
+                                   value="{{ field.value|default:0 }}" 
+                                   min="0" 
+                                   max="{{ field.field.max_value }}"
+                                   {% if field.value %}value="{{ field.value }}"{% endif %}>
+                            <span class="input-group-text">/ {{ field.field.max_value }}</span>
+                        </div>
+                        <div class="form-text">{{ field.help_text }}</div>
+                        {% if field.errors %}
+                        <div class="text-danger">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-success">Record Receipt</button>
+            <a href="{% url 'purchase:purchase-order-detail' po.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

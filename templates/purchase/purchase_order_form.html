@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}{{ view_type }} Purchase Order{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Procurement</div>
+            <h1 class="page-title">{{ view_type }} Purchase Order</h1>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                {{ form.supplier|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+                {{ form.expected_delivery_date|as_crispy_field }}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Line Items</h5>
+            </div>
+            <div class="card-body">
+                {{ item_formset.management_form }}
+                
+                {% for form in item_formset %}
+                <div class="row g-2 align-items-end mb-3 item-formset-row">
+                    <div class="col-md-5">
+                        {{ form.product|as_crispy_field }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.quantity_ordered|as_crispy_field }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.unit_cost|as_crispy_field }}
+                    </div>
+                    <div class="col-md-1">
+                        {% if item_formset.can_delete %}
+                        {{ form.DELETE }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="alert alert-info">
+                    <strong>Total Cost:</strong> ${{ total_cost|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Save Purchase Order</button>
+            <a href="{% url 'purchase:purchase-order-list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formsetContainer = document.querySelector('.item-formset-row');
+    if (!formsetContainer) return;
+
+    const totalRow = formsetContainer.closest('.card-body').querySelector('.alert');
+    const quantityInputs = document.querySelectorAll('input[id$="-quantity_ordered"]');
+    const costInputs = document.querySelectorAll('input[id$="-unit_cost"]');
+    
+    function updateTotal() {
+        let total = 0;
+        quantityInputs.forEach(function(qtyInput, index) {
+            const qty = parseFloat(qtyInput.value) || 0;
+            const cost = parseFloat(costInputs[index].value) || 0;
+            total += qty * cost;
+        });
+        if (totalRow) {
+            totalRow.innerHTML = '<strong>Total Cost:</strong> $' + total.toFixed(2);
+        }
+    }
+
+    quantityInputs.forEach(function(input) {
+        input.addEventListener('input', updateTotal);
+    });
+    
+    costInputs.forEach(function(input) {
+        input.addEventListener('input', updateTotal);
+    });
+});
+</script>
+{% endblock %}

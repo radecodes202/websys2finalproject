@@ -12,6 +12,14 @@ class Category(models.Model):
         blank=True,
         verbose_name=_('Description')
     )
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='children',
+        verbose_name=_('Parent Category')
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_('Created At')

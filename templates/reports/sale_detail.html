@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Sale #{{ sale.pk }}{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Reports</div>
+            <h1 class="page-title">Sale #{{ sale.pk }}</h1>
+        </div>
+        <div>
+            <a href="{% url 'reports:sales-history' %}" class="btn btn-outline-secondary">Back to Sales History</a>
+            <a href="{{ print_url }}" target="_blank" class="btn btn-primary">Reprint Receipt</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Receipt #{{ sale.pk }}</h5>
+                <span class="badge bg-{% if sale.status == 'completed' %}success{% elif sale.status == 'pending' %}warning{% else %}secondary{% endif %}">
+                    {{ sale.status|title }}
+                </span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Date</span>
+                <strong>{{ sale.date|date:"M d, Y h:i A" }}</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Cashier</span>
+                <strong>{{ sale.cashier.username|default:'N/A' }}</strong>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Payment</span>
+                <strong>{{ sale.payment_method|title }}</strong>
+            </div>
+            {% if sale.customer %}
+            <div class="d-flex justify-content-between">
+                <span>Customer</span>
+                <strong>{{ sale.customer.name }}</strong>
+            </div>
+            {% endif %}
+            <hr>
+            {% for item in sale.items.all %}
+            <div class="d-flex justify-content-between">
+                <span>{{ item.product.name }} × {{ item.quantity }}</span>
+                <span>{{ item.subtotal }}</span>
+            </div>
+            {% endfor %}
+            <hr>
+            <div class="d-flex justify-content-between">
+                <span>Subtotal</span>
+                <span>{{ sale.subtotal }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Discount</span>
+                <span>{{ sale.discount }}</span>
+            </div>
+            <div class="d-flex justify-content-between fw-bold">
+                <span>Total</span>
+                <span>{{ sale.total }}</span>
+            </div>
+            {% with payment=sale.payments.first %}
+            {% if payment %}
+            <div class="d-flex justify-content-between">
+                <span>Tendered</span>
+                <span>{{ payment.amount }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Change</span>
+                <span>{{ payment.change_given }}</span>
+            </div>
+            {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
+{% endblock %}

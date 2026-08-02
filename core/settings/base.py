@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'accounts',
     'category',
     'product',
+    'purchase',
     'supplier',
     'customer',
     'reports',
@@ -110,7 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
 AUTH_USER_MODEL = 'accounts.User'
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'accounts.backends.AxesCompatBackend',
 ]
 
 LANGUAGE_CODE = 'en-us'

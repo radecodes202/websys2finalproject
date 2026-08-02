@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}POS{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Sales</div>
+            <h1 class="page-title">Point of Sale</h1>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Products</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="row g-2 align-items-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_to_cart">
+                        <div class="col-md-6">
+                            <label class="form-label">Product</label>
+                            <select name="product_id" class="form-select">
+                                {% for product in products %}
+                                <option value="{{ product.pk }}">{{ product.name }} ({{ product.quantity_in_stock }} in stock)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Qty</label>
+                            <input type="number" name="quantity" value="1" min="1" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100">Add to Cart</button>
+                        </div>
+                    </form>
+                    <div class="mt-3">
+                        <div class="list-group">
+                            {% for product in products %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ product.name }}</span>
+                                <span class="text-muted">{{ product.unit_price }}</span>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted mb-0">No active products available.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Cart</h5>
+                </div>
+                <div class="card-body">
+                    {% if cart_items %}
+                        <div class="list-group mb-3">
+                            {% for item in cart_items %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ item.product.name }}</strong><br>
+                                    <small>{{ item.quantity }} × {{ item.product.unit_price }}</small>
+                                </div>
+                                <span>{{ item.subtotal }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <form method="post" class="row g-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="checkout">
+                            <div class="col-12">
+                                <label class="form-label">Payment Method</label>
+                                <select name="payment_method" class="form-select">
+                                    <option value="cash">Cash</option>
+                                    <option value="card">Card</option>
+                                    <option value="gcash">GCash</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Discount</label>
+                                <input type="number" name="discount" step="0.01" value="0.00" class="form-control">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Amount Tendered</label>
+                                <input type="number" name="amount_tendered" step="0.01" value="{{ cart_total }}" class="form-control">
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between fw-bold mt-2">
+                                    <span>Total</span>
+                                    <span>{{ cart_total }}</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-success w-100">Checkout</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p class="text-muted mb-0">No items in cart.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

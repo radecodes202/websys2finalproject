@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Inventory</div>
+            <h1 class="page-title">{{ product.name }}</h1>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'product:product-update' product.pk %}" class="btn btn-outline-primary">Edit</a>
+            <a href="{% url 'product:product-list' %}" class="btn btn-secondary">Back</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <p><strong>SKU:</strong> {{ product.sku }}</p>
+                    <p><strong>Code:</strong> {{ product.code|default:'—' }}</p>
+                    <p><strong>Barcode:</strong> {{ product.barcode|default:'—' }}</p>
+                    <p><strong>Category:</strong> {{ product.category.name }}</p>
+                    <p><strong>Preferred Supplier:</strong> {{ product.preferred_supplier.name|default:'—' }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Cost Price:</strong> ${{ product.cost_price }}</p>
+                    <p><strong>Unit Price:</strong> ${{ product.unit_price }}</p>
+                    <p><strong>Unit of Measure:</strong> {{ product.unit_of_measure }}</p>
+                    <p><strong>Stock:</strong> {{ product.quantity_in_stock }}</p>
+                    <p><strong>Reorder Level:</strong> {{ product.reorder_level }}</p>
+                </div>
+            </div>
+            <hr>
+            <p><strong>Description:</strong> {{ product.description|default:'—' }}</p>
+            <p><strong>Active:</strong> {{ product.is_active|yesno:'Yes,No' }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

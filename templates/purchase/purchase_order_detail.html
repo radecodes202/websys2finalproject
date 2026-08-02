@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Purchase Order PO-{{ po.pk }}{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Procurement</div>
+            <h1 class="page-title">Purchase Order PO-{{ po.pk }}</h1>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'purchase:purchase-order-update' po.pk %}" class="btn btn-outline-primary">Edit</a>
+            <a href="{% url 'purchase:purchase-order-list' %}" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Supplier</h6>
+                    <p class="mb-0 fw-semibold">{{ po.supplier.name }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Order Date</h6>
+                    <p class="mb-0 fw-semibold">{{ po.order_date|date:"M d, Y" }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Expected Delivery</h6>
+                    <p class="mb-0 fw-semibold">{{ po.expected_delivery_date|date:"M d, Y" }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Status</h6>
+                    <p class="mb-0">
+                        <span class="badge 
+                            {% if po.status == 'pending' %}bg-warning
+                            {% elif po.status == 'partial' %}bg-info
+                            {% elif po.status == 'received' %}bg-success
+                            {% elif po.status == 'cancelled' %}bg-danger
+                            {% endif %}">
+                            {{ po.get_status_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Total Cost</h6>
+                    <p class="mb-0 fw-semibold">${{ po.total_cost|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Items</h6>
+                    <p class="mb-0 fw-semibold">{{ po.total_items }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Line Items</h5>
+            {% if po.can_be_received %}
+            <a href="{% url 'purchase:purchase-order-receive' po.pk %}" class="btn btn-success btn-sm">Receive Stock</a>
+            {% endif %}
+        </div>
+        <div class="table-shell">
+            <table class="table table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Ordered</th>
+                    <th>Received</th>
+                    <th>Remaining</th>
+                    <th>Unit Cost</th>
+                    <th>Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in po.items.all %}
+                <tr>
+                    <td>{{ item.product.name }}</td>
+                    <td>{{ item.product.sku }}</td>
+                    <td>{{ item.quantity_ordered }}</td>
+                    <td>{{ item.received_quantity }}</td>
+                    <td>
+                        {% if item.remaining_quantity == 0 %}
+                            <span class="badge bg-success">Complete</span>
+                        {% else %}
+                            {{ item.remaining_quantity }}
+                        {% endif %}
+                    </td>
+                    <td>${{ item.unit_cost|floatformat:2 }}</td>
+                    <td>${{ item.total_cost|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if po.stock_receipts.all %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Stock Receipts</h5>
+    </div>
+    <div class="table-shell">
+        <table class="table table-striped align-middle mb-0">
+        <thead>
+            <tr>
+                <th>Receipt #</th>
+                <th>Received Date</th>
+                <th>Received By</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for receipt in po.stock_receipts.all %}
+            <tr>
+                <td><strong>SR-{{ receipt.pk }}</strong></td>
+                <td>{{ receipt.received_date|date:"M d, Y H:i" }}</td>
+                <td>{{ receipt.received_by.username|default:"System" }}</td>
+                <td>
+                    <a href="#" class="btn btn-sm btn-outline-primary">View Details</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+</div>
+{% endif %}
+
+{% if po.can_cancel %}
+<div class="alert alert-warning">
+    <strong>Note:</strong> This purchase order can still be cancelled as it has not been received yet.
+    <a href="{% url 'purchase:purchase-order-cancel' po.pk %}" class="alert-link">Click here to cancel</a>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

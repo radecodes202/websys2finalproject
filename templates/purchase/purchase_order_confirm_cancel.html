@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Cancel Purchase Order PO-{{ po.pk }}{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Procurement</div>
+            <h1 class="page-title">Cancel Purchase Order PO-{{ po.pk }}</h1>
+        </div>
+    </div>
+
+    <div class="alert alert-warning">
+        <h4 class="alert-heading">Are you sure you want to cancel this purchase order?</h4>
+        <p>This action cannot be undone. The purchase order will be marked as cancelled and no further receipts can be recorded against it.</p>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Purchase Order Details</h5>
+            <table class="table">
+                <tbody>
+                    <tr>
+                        <th scope="row">PO Number</th>
+                        <td><strong>PO-{{ po.pk }}</strong></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Supplier</th>
+                        <td>{{ po.supplier.name }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Order Date</th>
+                        <td>{{ po.order_date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Expected Delivery</th>
+                        <td>{{ po.expected_delivery_date|date:"M d, Y" }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Status</th>
+                        <td>{{ po.get_status_display }}</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Total Cost</th>
+                        <td>${{ po.total_cost|floatformat:2 }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-danger">Yes, Cancel Purchase Order</button>
+            <a href="{% url 'purchase:purchase-order-detail' po.pk %}" class="btn btn-secondary">No, Go Back</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

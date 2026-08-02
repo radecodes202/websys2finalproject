@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Accounts</div>
+            <h1 class="page-title">User Management</h1>
+        </div>
+        <div>
+            <a href="{% url 'accounts:admin_register' %}" class="btn btn-primary">Register New User</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Users</h5>
+            <div class="btn-group" role="group">
+                <a href="{% url 'accounts:user-management' %}?status=all" class="btn btn-sm {% if status_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">All</a>
+                <a href="{% url 'accounts:user-management' %}?status=active" class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-outline-primary{% endif %}">Active</a>
+                <a href="{% url 'accounts:user-management' %}?status=pending" class="btn btn-sm {% if status_filter == 'pending' %}btn-primary{% else %}btn-outline-primary{% endif %}">Pending</a>
+                <a href="{% url 'accounts:user-management' %}?status=inactive" class="btn btn-sm {% if status_filter == 'inactive' %}btn-primary{% else %}btn-outline-primary{% endif %}">Inactive</a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% if users %}
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Date Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>{{ user.get_role_display }}</td>
+                                <td>
+                                    {% if not user.is_approved %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif not user.is_active %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                                <td>
+                                    {% if user != request.user %}
+                                        <div class="d-flex gap-1 flex-wrap">
+                                            {% if not user.is_approved %}
+                                                <form method="post" class="d-inline">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                    <input type="hidden" name="action" value="approve">
+                                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                                </form>
+                                                <form method="post" class="d-inline" onsubmit="return confirm('Reject and remove this user?');">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                    <input type="hidden" name="action" value="reject">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                                </form>
+                                            {% else %}
+                                                {% if request.user.is_admin %}
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal"
+                                                        data-user-id="{{ user.id }}"
+                                                        data-username="{{ user.username }}"
+                                                        data-first-name="{{ user.first_name }}"
+                                                        data-last-name="{{ user.last_name }}"
+                                                        data-email="{{ user.email }}"
+                                                        data-role="{{ user.role }}"
+                                                        data-is-active="{{ user.is_active|lower }}">Edit</button>
+                                                {% endif %}
+                                                {% if request.user.is_admin %}
+                                                    <form method="post" class="d-inline" onsubmit="return confirm('Permanently delete this user? This cannot be undone. Only allowed because this account has no historical activity.');">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                        <input type="hidden" name="action" value="delete">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                                    </form>
+                                                {% endif %}
+                                                {% if user.is_active %}
+                                                    <form method="post" class="d-inline" onsubmit="return confirm('Deactivate this user? They will no longer be able to log in, but their history will be preserved.');">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                        <input type="hidden" name="action" value="toggle_active">
+                                                        <button type="submit" class="btn btn-sm btn-outline-warning">Deactivate</button>
+                                                    </form>
+                                                {% else %}
+                                                    <form method="post" class="d-inline" onsubmit="return confirm('Reactivate this user?');">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="user_id" value="{{ user.id }}">
+                                                        <input type="hidden" name="action" value="toggle_active">
+                                                        <button type="submit" class="btn btn-sm btn-outline-success">Activate</button>
+                                                    </form>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted small">Current user</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="empty-state">No users found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if request.user.is_admin %}
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" class="modal-body">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="user_id" id="edit_user_id">
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" id="edit_username" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">First Name</label>
+          <input type="text" name="first_name" id="edit_first_name" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Last Name</label>
+          <input type="text" name="last_name" id="edit_last_name" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" id="edit_email" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Role</label>
+          <select name="role" id="edit_role" class="form-select">
+            {% for value, label in request.user.ROLE_CHOICES %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Active</label>
+          <select name="is_active" id="edit_is_active" class="form-select">
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const modal = document.getElementById('editModal');
+  modal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-user-id');
+    const username = button.getAttribute('data-username');
+    const firstName = button.getAttribute('data-first-name');
+    const lastName = button.getAttribute('data-last-name');
+    const email = button.getAttribute('data-email');
+    const role = button.getAttribute('data-role');
+    const isActive = button.getAttribute('data-is-active');
+
+    document.getElementById('edit_user_id').value = id;
+    document.getElementById('edit_username').value = username;
+    document.getElementById('edit_first_name').value = firstName;
+    document.getElementById('edit_last_name').value = lastName;
+    document.getElementById('edit_email').value = email;
+    document.getElementById('edit_role').value = role;
+    document.getElementById('edit_is_active').value = isActive;
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}
