@@ -15,7 +15,7 @@ services:
       - key: USE_SQLITE
         value: "False"
       - key: ALLOWED_HOSTS
-        value: "websys2finalproject-group3.onrender.com"
+        value: "*"
       - key: DB_ENGINE
         value: django.db.backends.postgresql
       - key: DB_NAME
