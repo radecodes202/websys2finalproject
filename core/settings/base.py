@@ -19,7 +19,7 @@ if not SECRET_KEY:
     raise ImproperlyConfigured('SECRET_KEY must be set in the environment.')
 
 DEBUG = env('DEBUG', default=False)
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'websys2finalproject-group3.onrender.com'])
 USE_SQLITE = env('USE_SQLITE', default=True)
 
 INSTALLED_APPS = [

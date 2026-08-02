@@ -4,7 +4,7 @@ DEBUG = False
 
 SECRET_KEY = env('SECRET_KEY')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'websys2finalproject-group3.onrender.com'])
 
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 
