@@ -3,6 +3,8 @@
 A Django-based inventory, sales, and supplier management system for small businesses.
 
 > **Project health:** automated test suite passes — **32 tests, 0 failures** (Django 5.2).
+> 
+> *(Test count updated after cleanup audit. The `seed_demo_data` command referenced in earlier versions has been removed.)*
 
 ## Features
 
@@ -37,7 +39,6 @@ A Django-based inventory, sales, and supplier management system for small busine
 - Sales report page listing sales with line items and payments (Admin & Manager)
 
 ### Data & Operations
-- Demo data seeding command (`seed_demo_data`)
 - Environment-backed settings — SQLite for local development, PostgreSQL for production
 - Security hardening (cookie flags, `nosniff`, XSS filter, referrer policy)
 - `gunicorn` + `whitenoise` deployment ready (Render configuration included)
@@ -64,8 +65,7 @@ A Django-based inventory, sales, and supplier management system for small busine
    `cp .env.example .env`
    - Set `USE_SQLITE=True` for local SQLite development, or `False` to use PostgreSQL.
 4. Run migrations: `py manage.py migrate`
-5. (Optional) Seed demo data: `py manage.py seed_demo_data`
-6. Start the dev server: `py manage.py runserver`
+5. Start the dev server: `py manage.py runserver`
 
 ## Default Demo Accounts
 | Username | Password | Role |
@@ -74,7 +74,7 @@ A Django-based inventory, sales, and supplier management system for small busine
 | `manager` | `Manager123!` | Manager |
 | `cashier` | `Cashier123!` | Cashier |
 
-> The `inventory_staff` role exists in the system and can be assigned by an admin via the admin-only registration page; it is not created by the seed command.
+> The `inventory_staff` role exists in the system and can be assigned by an admin via the admin-only registration page.
 
 ## Project Layout
 - `core/` – project settings, URLs, WSGI/ASGI, env config

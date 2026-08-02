@@ -6,9 +6,9 @@ A Django web application for small-business inventory, sales, and supplier manag
 ## Tech Stack
 - **Backend:** Python 3.11+, Django 5.x (tested on 5.2)
 - **Database:** PostgreSQL (default) with a SQLite fallback for local development, configured via `django-environ`
-- **Frontend:** Django Templates + HTML5/CSS3, Bootstrap 5, vanilla JavaScript; forms via `django-crispy-forms` (crispy-bootstrap5) and filtering via `django-filter`
+- **Frontend:** Django Templates + HTML5/CSS3, Bootstrap 5, vanilla JavaScript; forms via `django-crispy-forms` (crispy-bootstrap5)
 - **Deployment:** `gunicorn` + `whitenoise`
-- **Other libraries:** `Pillow`, `openpyxl`, `WeasyPrint` (declared and available for future PDF/Excel export), `psycopg2-binary` (PostgreSQL driver)
+- **Other libraries:** `psycopg2-binary` (PostgreSQL driver)
 
 ## Environment Configuration
 All settings are environment-backed through `django-environ`. Copy `.env.example` to `.env` before running.
@@ -33,8 +33,7 @@ When `USE_SQLITE=True` the app uses `db.sqlite3`; otherwise the PostgreSQL value
 2. `pip install -r requirements.txt`
 3. `cp .env.example .env` and adjust values (set `USE_SQLITE=True` for local development).
 4. `py manage.py migrate`
-5. `py manage.py seed_demo_data` (optional demo data)
-6. `py manage.py runserver`
+5. `py manage.py runserver`
 
 ## Architecture
 - `core/` – settings, URLs, WSGI/ASGI, env configuration
