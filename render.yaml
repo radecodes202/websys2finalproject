@@ -9,7 +9,7 @@ services:
       - key: DJANGO_ENV
         value: "prod"
       - key: SECRET_KEY
-        value: 7ssgzad3r=pd5x#(f-^pcbw==+#4+5s_-!v7np1(39(kr)h(5=
+        value: django-insecure-change-me
       - key: DEBUG
         value: "False"
       - key: USE_SQLITE
