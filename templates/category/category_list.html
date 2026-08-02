@@ -37,7 +37,9 @@
                 <td>{{ category.created_at|date:"Y-m-d H:i" }}</td>
                 <td class="table-actions">
                     <a href="{% url 'category:category-update' category.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                    <a href="{% url 'category:category-delete' category.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteCategoryModal{{ category.pk }}">
+                        Delete
+                    </button>
                 </td>
             </tr>
             {% endfor %}
@@ -81,4 +83,29 @@
     {% endif %}
     </div>
 </div>
+
+<!-- Delete Confirmation Modals -->
+{% for category in categories %}
+<div class="modal fade" id="deleteCategoryModal{{ category.pk }}" tabindex="-1" aria-labelledby="deleteCategoryModalLabel{{ category.pk }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteCategoryModalLabel{{ category.pk }}">Delete Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>{{ category.name }}</strong>?</p>
+                <p class="text-danger mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'category:category-delete' category.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

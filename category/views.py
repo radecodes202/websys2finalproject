@@ -1,5 +1,8 @@
+from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
+from django.contrib import messages
+from django.shortcuts import redirect, get_object_or_404
 from accounts.mixins import RoleRequiredMixin
 from .models import Category
 
@@ -35,8 +38,13 @@ class CategoryUpdateView(RoleRequiredMixin, UpdateView):
     allowed_roles = ['admin', 'manager', 'inventory_staff']
 
 
-class CategoryDeleteView(RoleRequiredMixin, DeleteView):
+class CategoryDeleteView(RoleRequiredMixin, View):
     model = Category
-    template_name = 'category/category_confirm_delete.html'
     success_url = reverse_lazy('category:category-list')
     allowed_roles = ['admin', 'manager', 'inventory_staff']
+
+    def post(self, request, pk):
+        category = get_object_or_404(Category, pk=pk)
+        category.delete()
+        messages.success(request, f'Category "{category.name}" deleted successfully.')
+        return redirect(self.success_url)

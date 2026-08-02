@@ -27,15 +27,6 @@
   - Implemented chart data in `accounts/views.py` `HomeView`
   - Charts: sales trend (line), top-selling products (bar), sales by category (doughnut), profit margin trend (line)
 
-### 2. Chart.js Dashboard Charts
-- **Gap:** Not in `requirements.txt`; no sales trend / top-selling / category / profit charts.
-- **Impact:** Dashboard lacks visual analytics required by prompt.
-- **Action:**
-  - Add `chart.js` CDN to `templates/base.html`
-  - Create dashboard API endpoint or context data for chart JSON
-  - Add Chart.js canvases to `templates/home.html`
-  - Implement charts: sales trend (line/bar), top-selling products, sales by category, profit margin trend
-
 ### 3. PDF Export (WeasyPrint / xhtml2pdf)
 - **Status:** ✅ Completed
 - **Changes:**
@@ -163,12 +154,20 @@
   - Filtering already implemented in list views via GET parameters
 
 ### 20. Column Sorting
-- **Status:** ⏳ Not implemented (low priority)
-- **Action:** Add `?sort=` GET param handling and template sort icons.
+- **Status:** ✅ Completed
+- **Changes:**
+  - Added `?sort=` GET parameter handling in `ProductListView`
+  - Created `product/templatetags/product_extras.py` with `url_replace` template tag
+  - Added sortable column headers with icons to `templates/product/product_list.html`
+  - Supports sorting by: name, SKU, category, unit price, quantity in stock, reorder level
 
 ### 21. Confirmation Modals
-- **Status:** ⏳ Not implemented (low priority)
-- **Action:** Add Bootstrap modals with confirm/cancel buttons for destructive actions.
+- **Status:** ✅ Completed
+- **Changes:**
+  - Added Bootstrap confirmation modals to product, supplier, category, and customer list templates
+  - Added cancel confirmation modals to purchase order list and detail templates
+  - Added reject/delete/deactivate/activate confirmation modals to user management template
+  - Converted delete views to POST-only (Product, Supplier, Category, Customer)
 
 ### 22. Loading States / Toasts
 - **Status:** ✅ Completed
@@ -240,14 +239,13 @@
 6. **Medium:** Implement barcode scanner integration ✅
 7. **Medium:** Add manual stock adjustment UI ✅
 8. **Low:** Add remaining report types (inventory valuation, P&L, stock movement) ✅
-9. **Low:** Add column sorting, confirmation modals, loading states ⏳
+9. **Low:** Add column sorting, confirmation modals, loading states ✅
 10. **Low:** Add django-filter, deployment URL placeholder, backup docs ✅
 
 ## Summary
 
 **Total Items:** 29
-**Completed:** 25 ✅
-**Not Implemented (Low Priority):** 2 ⏳ (#20, #21)
+**Completed:** 27 ✅
 **Excluded:** 1 ❌ (#1 - seed_demo_data)
 **Last Updated:** 2025-08-02
 **Commit:** 739023a

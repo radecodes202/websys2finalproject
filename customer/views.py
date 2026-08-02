@@ -1,5 +1,8 @@
+from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
+from django.contrib import messages
+from django.shortcuts import redirect, get_object_or_404
 from accounts.mixins import RoleRequiredMixin
 from .models import Customer
 
@@ -35,8 +38,13 @@ class CustomerUpdateView(RoleRequiredMixin, UpdateView):
     allowed_roles = ['admin', 'manager', 'cashier']
 
 
-class CustomerDeleteView(RoleRequiredMixin, DeleteView):
+class CustomerDeleteView(RoleRequiredMixin, View):
     model = Customer
-    template_name = 'customer/customer_confirm_delete.html'
     success_url = reverse_lazy('customer:customer-list')
     allowed_roles = ['admin', 'manager', 'cashier']
+
+    def post(self, request, pk):
+        customer = get_object_or_404(Customer, pk=pk)
+        customer.delete()
+        messages.success(request, f'Customer "{customer.name}" deleted successfully.')
+        return redirect(self.success_url)

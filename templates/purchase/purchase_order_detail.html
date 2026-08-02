@@ -155,7 +155,32 @@
 {% if po.can_cancel %}
 <div class="alert alert-warning">
     <strong>Note:</strong> This purchase order can still be cancelled as it has not been received yet.
-    <a href="{% url 'purchase:purchase-order-cancel' po.pk %}" class="alert-link">Click here to cancel</a>
+    <button type="button" class="alert-link btn btn-link p-0" data-bs-toggle="modal" data-bs-target="#cancelPODetailModal{{ po.pk }}">
+        Click here to cancel
+    </button>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div class="modal fade" id="cancelPODetailModal{{ po.pk }}" tabindex="-1" aria-labelledby="cancelPODetailModalLabel{{ po.pk }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelPODetailModalLabel{{ po.pk }}">Cancel Purchase Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel <strong>PO-{{ po.pk }}</strong> from <strong>{{ po.supplier.name }}</strong>?</p>
+                <p class="text-danger mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form method="post" action="{% url 'purchase:purchase-order-cancel' po.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Cancel Purchase Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endif %}
 

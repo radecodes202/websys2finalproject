@@ -72,12 +72,9 @@
                                                     <input type="hidden" name="action" value="approve">
                                                     <button type="submit" class="btn btn-sm btn-success">Approve</button>
                                                 </form>
-                                                <form method="post" class="d-inline" onsubmit="return confirm('Reject and remove this user?');">
-                                                    {% csrf_token %}
-                                                    <input type="hidden" name="user_id" value="{{ user.id }}">
-                                                    <input type="hidden" name="action" value="reject">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
-                                                </form>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectUserModal{{ user.id }}">
+                                                    Reject
+                                                </button>
                                             {% else %}
                                                 {% if request.user.is_admin %}
                                                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal"
@@ -90,27 +87,18 @@
                                                         data-is-active="{{ user.is_active|lower }}">Edit</button>
                                                 {% endif %}
                                                 {% if request.user.is_admin %}
-                                                    <form method="post" class="d-inline" onsubmit="return confirm('Permanently delete this user? This cannot be undone. Only allowed because this account has no historical activity.');">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="user_id" value="{{ user.id }}">
-                                                        <input type="hidden" name="action" value="delete">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteUserModal{{ user.id }}">
+                                                        Delete
+                                                    </button>
                                                 {% endif %}
                                                 {% if user.is_active %}
-                                                    <form method="post" class="d-inline" onsubmit="return confirm('Deactivate this user? They will no longer be able to log in, but their history will be preserved.');">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="user_id" value="{{ user.id }}">
-                                                        <input type="hidden" name="action" value="toggle_active">
-                                                        <button type="submit" class="btn btn-sm btn-outline-warning">Deactivate</button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#deactivateUserModal{{ user.id }}">
+                                                        Deactivate
+                                                    </button>
                                                 {% else %}
-                                                    <form method="post" class="d-inline" onsubmit="return confirm('Reactivate this user?');">
-                                                        {% csrf_token %}
-                                                        <input type="hidden" name="user_id" value="{{ user.id }}">
-                                                        <input type="hidden" name="action" value="toggle_active">
-                                                        <button type="submit" class="btn btn-sm btn-outline-success">Activate</button>
-                                                    </form>
+                                                    <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#activateUserModal{{ user.id }}">
+                                                        Activate
+                                                    </button>
                                                 {% endif %}
                                             {% endif %}
                                         </div>
@@ -199,4 +187,109 @@
 })();
 </script>
 {% endif %}
+
+<!-- Confirmation Modals -->
+{% for user in users %}
+{% if user != request.user %}
+{% if not user.is_approved %}
+<div class="modal fade" id="rejectUserModal{{ user.id }}" tabindex="-1" aria-labelledby="rejectUserModalLabel{{ user.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rejectUserModalLabel{{ user.id }}">Reject User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reject and remove <strong>{{ user.username }}</strong>?</p>
+                <p class="text-danger mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <input type="hidden" name="action" value="reject">
+                    <button type="submit" class="btn btn-danger">Reject User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+{% if request.user.is_admin %}
+<div class="modal fade" id="deleteUserModal{{ user.id }}" tabindex="-1" aria-labelledby="deleteUserModalLabel{{ user.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteUserModalLabel{{ user.id }}">Delete User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete <strong>{{ user.username }}</strong>?</p>
+                <p class="text-danger mb-0">This action cannot be undone. Only allowed because this account has no historical activity.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="btn btn-danger">Delete User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% if user.is_active %}
+<div class="modal fade" id="deactivateUserModal{{ user.id }}" tabindex="-1" aria-labelledby="deactivateUserModalLabel{{ user.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deactivateUserModalLabel{{ user.id }}">Deactivate User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to deactivate <strong>{{ user.username }}</strong>?</p>
+                <p class="text-muted mb-0">They will no longer be able to log in, but their history will be preserved.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <input type="hidden" name="action" value="toggle_active">
+                    <button type="submit" class="btn btn-warning">Deactivate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="modal fade" id="activateUserModal{{ user.id }}" tabindex="-1" aria-labelledby="activateUserModalLabel{{ user.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="activateUserModalLabel{{ user.id }}">Activate User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reactivate <strong>{{ user.username }}</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ user.id }}">
+                    <input type="hidden" name="action" value="toggle_active">
+                    <button type="submit" class="btn btn-success">Activate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+{% endif %}
+{% endfor %}
 {% endblock %}

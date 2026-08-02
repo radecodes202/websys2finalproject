@@ -79,7 +79,9 @@
                 <td class="table-actions">
                     <a href="{% url 'purchase:purchase-order-detail' po.pk %}" class="btn btn-sm btn-outline-primary">View</a>
                     {% if po.can_cancel %}
-                    <a href="{% url 'purchase:purchase-order-cancel' po.pk %}" class="btn btn-sm btn-outline-danger">Cancel</a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelPOModal{{ po.pk }}">
+                        Cancel
+                    </button>
                     {% endif %}
                     {% if po.can_be_received %}
                     <a href="{% url 'purchase:purchase-order-receive' po.pk %}" class="btn btn-sm btn-success">Receive</a>
@@ -127,4 +129,31 @@
     {% endif %}
     </div>
 </div>
+
+<!-- Cancel Confirmation Modals -->
+{% for po in purchase_orders %}
+{% if po.can_cancel %}
+<div class="modal fade" id="cancelPOModal{{ po.pk }}" tabindex="-1" aria-labelledby="cancelPOModalLabel{{ po.pk }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelPOModalLabel{{ po.pk }}">Cancel Purchase Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel <strong>PO-{{ po.pk }}</strong> from <strong>{{ po.supplier.name }}</strong>?</p>
+                <p class="text-danger mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form method="post" action="{% url 'purchase:purchase-order-cancel' po.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Cancel Purchase Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
 {% endblock %}

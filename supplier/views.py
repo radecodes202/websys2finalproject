@@ -1,9 +1,11 @@
 from decimal import Decimal
 from django.db.models import Sum, Q, F
+from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.db import transaction
 from django.contrib import messages
+from django.shortcuts import redirect, get_object_or_404
 from accounts.mixins import RoleRequiredMixin
 from audit.models import AuditLog
 from audit.services import log_activity
@@ -41,11 +43,16 @@ class SupplierUpdateView(RoleRequiredMixin, UpdateView):
     allowed_roles = ['admin', 'manager', 'inventory_staff']
 
 
-class SupplierDeleteView(RoleRequiredMixin, DeleteView):
+class SupplierDeleteView(RoleRequiredMixin, View):
     model = Supplier
-    template_name = 'supplier/supplier_confirm_delete.html'
     success_url = reverse_lazy('supplier:supplier-list')
     allowed_roles = ['admin', 'manager', 'inventory_staff']
+
+    def post(self, request, pk):
+        supplier = get_object_or_404(Supplier, pk=pk)
+        supplier.delete()
+        messages.success(request, f'Supplier "{supplier.name}" deleted successfully.')
+        return redirect(self.success_url)
 
 
 class SupplierPaymentListView(RoleRequiredMixin, ListView):

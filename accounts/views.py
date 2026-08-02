@@ -19,7 +19,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from product.models import Alert, Product, Sale, PurchaseOrder
+from product.models import Alert, Product, Sale, SaleItem, PurchaseOrder
 from audit.services import log_activity
 from audit.models import AuditLog
 from .forms import CustomUserCreationForm, AdminUserCreationForm

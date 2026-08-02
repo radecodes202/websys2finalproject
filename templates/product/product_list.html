@@ -1,6 +1,7 @@
 ﻿{% extends 'base.html' %}
 {% load crispy_forms_tags %}
 {% load static %}
+{% load product_extras %}
 
 {% block title %}Product List{% endblock %}
 
@@ -15,7 +16,7 @@
     </div>
 
     <form method="get" class="search-bar row g-2 align-items-end">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <input type="text" name="search" placeholder="Search products..." value="{{ request.GET.search }}" class="form-control">
         </div>
         <div class="col-md-2">
@@ -42,7 +43,8 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-1">
+            <input type="hidden" name="sort" value="{{ current_sort }}">
             <button type="submit" class="btn btn-outline-secondary w-100">Search</button>
         </div>
     </form>
@@ -52,12 +54,42 @@
         <table class="table table-striped align-middle">
         <thead>
             <tr>
-                <th>Name</th>
-                <th>SKU</th>
-                <th>Category</th>
-                <th>Unit Price</th>
-                <th>Quantity in Stock</th>
-                <th>Reorder Level</th>
+                <th>
+                    <a href="?{% url_replace sort='name' %}" class="sort-link">
+                        Name
+                        {% if current_sort == 'name' %}<i class="bi bi-arrow-down-up"></i>{% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% url_replace sort='sku' %}" class="sort-link">
+                        SKU
+                        {% if current_sort == 'sku' %}<i class="bi bi-arrow-down-up"></i>{% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% url_replace sort='category' %}" class="sort-link">
+                        Category
+                        {% if current_sort == 'category' %}<i class="bi bi-arrow-down-up"></i>{% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% url_replace sort='price' %}" class="sort-link">
+                        Unit Price
+                        {% if current_sort == 'price' %}<i class="bi bi-arrow-down-up"></i>{% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% url_replace sort='stock' %}" class="sort-link">
+                        Quantity in Stock
+                        {% if current_sort == 'stock' %}<i class="bi bi-arrow-down-up"></i>{% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% url_replace sort='reorder' %}" class="sort-link">
+                        Reorder Level
+                        {% if current_sort == 'reorder' %}<i class="bi bi-arrow-down-up"></i>{% endif %}
+                    </a>
+                </th>
                 <th>Is Active</th>
                 <th>Actions</th>
             </tr>
@@ -74,8 +106,14 @@
                 <td>{{ product.is_active|yesno:"Yes,No" }}</td>
                 <td class="table-actions">
                     <a href="{% url 'product:product-update' product.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                    <a href="{% url 'product:product-delete' product.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteProductModal{{ product.pk }}">
+                        Delete
+                    </button>
                 </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center py-4">No products found.</td>
             </tr>
             {% endfor %}
         </tbody>
@@ -86,7 +124,7 @@
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">Previous</a>
             </li>
             {% else %}
             <li class="page-item disabled"><span class="page-link">Previous</span></li>
@@ -97,14 +135,14 @@
             <li class="page-item active"><span class="page-link">{{ num }}</span></li>
             {% else %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+                <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">{{ num }}</a>
             </li>
             {% endif %}
             {% endfor %}
 
             {% if page_obj.has_next %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if current_sort %}&sort={{ current_sort }}{% endif %}">Next</a>
             </li>
             {% else %}
             <li class="page-item disabled"><span class="page-link">Next</span></li>
@@ -118,4 +156,29 @@
     {% endif %}
     </div>
 </div>
+
+<!-- Delete Confirmation Modals -->
+{% for product in products %}
+<div class="modal fade" id="deleteProductModal{{ product.pk }}" tabindex="-1" aria-labelledby="deleteProductModalLabel{{ product.pk }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProductModalLabel{{ product.pk }}">Delete Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>{{ product.name }}</strong>?</p>
+                <p class="text-danger mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'product:product-delete' product.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}

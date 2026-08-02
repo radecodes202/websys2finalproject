@@ -93,6 +93,7 @@ class ProductListView(RoleRequiredMixin, ListView):
         category = self.request.GET.get('category')
         stock_status = self.request.GET.get('stock_status')
         supplier = self.request.GET.get('supplier')
+        sort = self.request.GET.get('sort', 'name')
 
         if search_query:
             queryset = queryset.filter(name__icontains=search_query)
@@ -106,12 +107,27 @@ class ProductListView(RoleRequiredMixin, ListView):
             queryset = queryset.filter(quantity_in_stock__gt=models.F('reorder_level'))
         elif stock_status == 'out':
             queryset = queryset.filter(quantity_in_stock=0)
+
+        # Column sorting
+        allowed_sorts = {
+            'name': 'name',
+            'sku': 'sku',
+            'category': 'category__name',
+            'price': 'unit_price',
+            'stock': 'quantity_in_stock',
+            'reorder': 'reorder_level',
+        }
+        sort_field = allowed_sorts.get(sort, 'name')
+        if sort_field:
+            queryset = queryset.order_by(sort_field)
+
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['categories'] = Category.objects.all()
         context['suppliers'] = Supplier.objects.all()
+        context['current_sort'] = self.request.GET.get('sort', 'name')
         return context
 
 
@@ -138,11 +154,16 @@ class ProductUpdateView(RoleRequiredMixin, UpdateView):
     allowed_roles = ['admin', 'manager', 'inventory_staff']
 
 
-class ProductDeleteView(RoleRequiredMixin, DeleteView):
+class ProductDeleteView(RoleRequiredMixin, View):
     model = Product
-    template_name = 'product/product_confirm_delete.html'
     success_url = reverse_lazy('product:product-list')
     allowed_roles = ['admin', 'manager', 'inventory_staff']
+
+    def post(self, request, pk):
+        product = get_object_or_404(Product, pk=pk)
+        product.delete()
+        messages.success(request, f'Product "{product.name}" deleted successfully.')
+        return redirect(self.success_url)
 
 
 class POSView(RoleRequiredMixin, View):
