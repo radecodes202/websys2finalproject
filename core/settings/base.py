@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -142,5 +143,3 @@ LOGOUT_REDIRECT_URL = '/'
 
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
 PASSWORD_RESET_TIMEOUT = 86400
-
-from django.core.exceptions import ImproperlyConfigured

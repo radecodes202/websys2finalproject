@@ -4,6 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    releaseCommand: python manage.py migrate
     startCommand: gunicorn core.wsgi:application
     envVars:
       - key: DJANGO_ENV
@@ -15,7 +16,7 @@ services:
       - key: USE_SQLITE
         value: "False"
       - key: ALLOWED_HOSTS
-        value: "websys2finalproject-group3.onrender.com"
+        value: "websys2finalproject.onrender.com, .onrender.com"
       - key: DB_ENGINE
         value: django.db.backends.postgresql
       - key: DB_NAME
