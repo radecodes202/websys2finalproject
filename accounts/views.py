@@ -2,7 +2,14 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.views import PasswordChangeView, PasswordChangeDoneView
+from django.contrib.auth.views import (
+    PasswordChangeView,
+    PasswordChangeDoneView,
+    PasswordResetView,
+    PasswordResetDoneView,
+    PasswordResetConfirmView,
+    PasswordResetCompleteView,
+)
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views import View
@@ -129,6 +136,25 @@ class PendingUserListView(RoleRequiredMixin, ListView):
             user.save()
             messages.success(request, f'User {user.username} has been approved.')
         return redirect('accounts:pending_users')
+
+
+class CustomPasswordResetView(PasswordResetView):
+    email_template_name = 'accounts/password_reset_email.html'
+    template_name = 'accounts/password_reset.html'
+    success_url = reverse_lazy('accounts:password_reset_done')
+
+
+class CustomPasswordResetDoneView(PasswordResetDoneView):
+    template_name = 'accounts/password_reset_done.html'
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    template_name = 'accounts/password_reset_confirm.html'
+    success_url = reverse_lazy('accounts:password_reset_complete')
+
+
+class CustomPasswordResetCompleteView(PasswordResetCompleteView):
+    template_name = 'accounts/password_reset_complete.html'
 
 
 # Password change views using Django's built-in views

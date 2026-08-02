@@ -50,6 +50,27 @@ class SupplierPaymentTests(TestCase):
         self.assertEqual(supplier_payment.amount, Decimal('100.00'))
 
 
+class PasswordResetFlowTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='reset_user',
+            email='reset@example.com',
+            password='StrongPass123',
+            role='cashier',
+            is_approved=True,
+        )
+
+    def test_password_reset_page_renders(self):
+        response = self.client.get(reverse('accounts:password_reset'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'accounts/password_reset.html')
+
+    def test_password_reset_post_redirects_to_done_page(self):
+        response = self.client.post(reverse('accounts:password_reset'), {'email': self.user.email})
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('accounts:password_reset_done'))
+
+
 class SecuritySettingsTests(TestCase):
     def test_secure_session_and_csrf_settings_are_enabled(self):
         self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
