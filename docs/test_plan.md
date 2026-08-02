@@ -6,6 +6,7 @@ Automated Django `TestCase` suites covering:
 - **Role-based access control** — anonymous redirects and per-role allow/deny across the dashboard, categories, products, suppliers, customers, reports, pending users, and admin-only registration
 - **Admin-only user registration** — self-register form excludes the `admin` role; admins can create new admins who are immediately approved
 - **Security settings** — session/CSRF cookie flags, SameSite, nosniff, XSS filter, referrer policy
+- **Audit app** — the dedicated `audit/` app is exercised via its model/service tests and is now part of the project structure
 - **Product CRUD** — create + list with search
 - **Purchase-order receiving** — receiving increases stock, creates a `purchase` `StockMovement`, and transitions the PO to `received`
 - **Sale checkout** — completing a sale deducts stock, creates a `sale` `StockMovement`, and guards against overselling
@@ -14,12 +15,12 @@ Automated Django `TestCase` suites covering:
 - **Reports** — the sales report page renders with live sale data (items, payments)
 
 ## Test Inventory
-- `accounts.tests` — 7 test classes: `SupplierPaymentTests`, `ActivityLogTests`, `SecuritySettingsTests`, `ReportsTests`, `HomeDashboardTests`, `RoleBasedAccessTests`, `AdminRoleRegistrationTests`
+- `accounts.tests` — 6 test classes: `SupplierPaymentTests`, `SecuritySettingsTests`, `ReportsTests`, `HomeDashboardTests`, `RoleBasedAccessTests`, `AdminRoleRegistrationTests`
 - `product.tests` — 4 test classes: `ProductReceivingTests`, `SaleCheckoutTests`, `AlertTests`, `ProductCRUDTests`
 - `supplier.tests`, `customer.tests`, `category.tests` — regression tests for CRUD and access checks
 
 ## Execution Commands
-- Full suite (32 tests):
+- Full suite (31 tests):
   `py manage.py test accounts supplier customer category product`
 - Per app:
   - `py manage.py test accounts.tests`
@@ -31,6 +32,6 @@ Automated Django `TestCase` suites covering:
 ## Expected Results
 All suites complete with status `OK`:
 ```
-Ran 32 tests in ~13s
+Ran 31 tests in ~13s
 OK
 ```

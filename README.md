@@ -2,9 +2,9 @@
 
 A Django-based inventory, sales, and supplier management system for small businesses.
 
-> **Project health:** automated test suite passes — **32 tests, 0 failures** (Django 5.2).
+> **Project health:** automated test suite passes — **31 tests, 0 failures** (Django 5.2).
 > 
-> *(Test count updated after cleanup audit. The `seed_demo_data` command referenced in earlier versions has been removed.)*
+> *(The obsolete `accounts.ActivityLog` model was removed in Step 1; the audit trail now lives in the dedicated `audit/` app.)*
 
 ## Features
 
@@ -14,7 +14,7 @@ A Django-based inventory, sales, and supplier management system for small busine
 - **Admin-only registration** — an existing admin can register new users (including other admins) who are approved immediately
 - Password change flows
 - Role-based access control via `RoleRequiredMixin` (enforced at both the view level and the template level)
-- **Activity audit log** (`ActivityLog`) recording `create`/`update`/`delete`/`login`/`logout` actions with before/after JSON snapshots
+- **Audit trail** in the dedicated `audit/` app recording `create`/`update`/`delete`/`login`/`logout` actions with before/after JSON snapshots
 
 ### Dashboard
 - Summary cards: **Total Products**, **Total Sales Today**, **Low Stock Items**, **Open Alerts**
@@ -78,7 +78,7 @@ A Django-based inventory, sales, and supplier management system for small busine
 
 ## Project Layout
 - `core/` – project settings, URLs, WSGI/ASGI, env config
-- `accounts/` – custom `User`, roles, approval workflow, `ActivityLog`, `RoleRequiredMixin`, dashboard and auth views
+- `accounts/` – custom `User`, roles, approval workflow, `RoleRequiredMixin`, dashboard and auth views
 - `category/` – `Category` model + CRUD
 - `product/` – inventory, purchase orders, stock receipts, stock movements, sales, alerts (data model + business logic + Product CRUD UI)
 - `supplier/` – `Supplier` + `SupplierPayment` models + Supplier CRUD
@@ -96,7 +96,7 @@ Browser security defaults are enabled and verified by tests:
 - `SECRET_KEY`, `DEBUG`, and database credentials are read from environment variables.
 
 ## Testing
-Run the full suite (32 tests):
+Run the full suite (31 tests):
 `py manage.py test accounts supplier customer category product`
 
 ## Deployment (Render)

@@ -11,7 +11,6 @@ from category.models import Category
 from product.models import Alert, Product, Sale, SaleItem, Payment
 from supplier.models import Supplier, SupplierPayment
 from customer.models import Customer
-from accounts.models import ActivityLog
 
 User = get_user_model()
 
@@ -49,33 +48,6 @@ class SupplierPaymentTests(TestCase):
 
         self.assertEqual(supplier_payment.supplier, self.supplier)
         self.assertEqual(supplier_payment.amount, Decimal('100.00'))
-
-
-class ActivityLogTests(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username='audit_user',
-            email='audit@example.com',
-            password='StrongPass123',
-            role='admin',
-            is_approved=True,
-        )
-
-    def test_activity_log_records_user_action_and_snapshots(self):
-        activity_log = ActivityLog.objects.create(
-            user=self.user,
-            action='create',
-            model_name='Product',
-            object_id=1,
-            before_snapshot={'sku': ''},
-            after_snapshot={'sku': 'SKU-LOG-01'},
-        )
-
-        self.assertEqual(activity_log.user, self.user)
-        self.assertEqual(activity_log.action, 'create')
-        self.assertEqual(activity_log.model_name, 'Product')
-        self.assertEqual(activity_log.before_snapshot['sku'], '')
-        self.assertEqual(activity_log.after_snapshot['sku'], 'SKU-LOG-01')
 
 
 class SecuritySettingsTests(TestCase):

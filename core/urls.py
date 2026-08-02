@@ -26,5 +26,6 @@ urlpatterns = [
     path('suppliers/', include('supplier.urls')),
     path('customers/', include('customer.urls')),
     path('reports/', include('reports.urls')),
+    path('audit/', include('audit.urls')),
     path('', HomeView.as_view(), name='home'),
 ]

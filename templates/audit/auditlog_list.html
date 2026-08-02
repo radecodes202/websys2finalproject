@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Audit Log — Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Audit Log</h2>
+        <a href="{% url 'audit:audit-log-export' %}?{{ request.GET.urlencode }}" class="btn btn-success btn-sm">
+            Export CSV
+        </a>
+    </div>
+
+    {# ---- Filter form ---- #}
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small">Search</label>
+                    <input type="text" name="search" value="{{ request.GET.search }}" class="form-control form-control-sm" placeholder="Object or description...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">User</label>
+                    <select name="user" class="form-select form-select-sm">
+                        <option value="">All users</option>
+                        {% for uid, username in user_choices %}
+                            <option value="{{ uid }}" {% if request.GET.user == uid|stringformat:"s" %}selected{% endif %}>{{ username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Action</label>
+                    <select name="action" class="form-select form-select-sm">
+                        <option value="">All actions</option>
+                        {% for value, label in action_choices %}
+                            <option value="{{ value }}" {% if request.GET.action == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Severity</label>
+                    <select name="severity" class="form-select form-select-sm">
+                        <option value="">All severities</option>
+                        {% for value, label in severity_choices %}
+                            <option value="{{ value }}" {% if request.GET.severity == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Module</label>
+                    <select name="content_type" class="form-select form-select-sm">
+                        <option value="">All modules</option>
+                        {% for ct_id, app_label, model in content_type_choices %}
+                            <option value="{{ ct_id }}" {% if request.GET.content_type == ct_id|stringformat:"s" %}selected{% endif %}>{{ app_label }} / {{ model }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Date from</label>
+                    <input type="date" name="date_from" value="{{ request.GET.date_from }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Date to</label>
+                    <input type="date" name="date_to" value="{{ request.GET.date_to }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-1">
+                    <a href="{% url 'audit:audit-log-list' %}" class="btn btn-outline-secondary btn-sm w-100">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# ---- Audit log table ---- #}
+    <div class="card">
+        <div class="card-body">
+            {% if audit_logs %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Severity</th>
+                                <th>Module</th>
+                                <th>Object</th>
+                                <th>Description</th>
+                                <th>IP</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in audit_logs %}
+                                <tr>
+                                    <td class="text-nowrap small">{{ log.timestamp|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ log.username_snapshot|default:"System" }}</td>
+                                    <td>
+                                        {% if log.action == 'DELETE' or log.action == 'LOGIN_FAILED' %}
+                                            <span class="badge bg-warning">{{ log.get_action_display }}</span>
+                                        {% elif log.action == 'LOGIN' or log.action == 'LOGOUT' %}
+                                            <span class="badge bg-info">{{ log.get_action_display }}</span>
+                                        {% elif log.action == 'CREATE' %}
+                                            <span class="badge bg-success">{{ log.get_action_display }}</span>
+                                        {% elif log.action == 'UPDATE' %}
+                                            <span class="badge bg-primary">{{ log.get_action_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ log.get_action_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.severity == 'CRITICAL' %}
+                                            <span class="badge bg-danger">{{ log.get_severity_display }}</span>
+                                        {% elif log.severity == 'WARNING' %}
+                                            <span class="badge bg-warning">{{ log.get_severity_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">{{ log.get_severity_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small">{{ log.module_name }} / {{ log.model_name }}</td>
+                                    <td class="small">{{ log.object_repr }}</td>
+                                    <td class="small text-truncate" style="max-width: 300px;">{{ log.description }}</td>
+                                    <td class="small">{{ log.ip_address|default:"—" }}</td>
+                                    <td>
+                                        <a href="{% url 'audit:audit-log-detail' log.pk %}" class="btn btn-outline-primary btn-sm">View</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {# ---- Pagination ---- #}
+                {% if is_paginated %}
+                    <nav aria-label="Audit log pagination">
+                        <ul class="pagination pagination-sm justify-content-center">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ query_params }}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}&{{ query_params }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ query_params }}">Next</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    <p class="text-center text-muted small">
+                        Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        ({{ page_obj.paginator.count }} total entries)
+                    </p>
+                {% endif %}
+            {% else %}
+                <p class="text-muted text-center py-4">No audit log entries found.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

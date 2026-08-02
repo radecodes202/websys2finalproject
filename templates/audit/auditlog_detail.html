@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Log Detail #{{ audit_log.pk }} — Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Audit Log Detail #{{ audit_log.pk }}</h2>
+        <a href="{% url 'audit:audit-log-list' %}" class="btn btn-outline-primary btn-sm">Back to List</a>
+    </div>
+
+    <div class="row">
+        {# ---- Entry metadata ---- #}
+        <div class="col-md-5">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <strong>Entry Details</strong>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tbody>
+                            <tr>
+                                <th style="width: 140px;">Timestamp</th>
+                                <td>{{ audit_log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                            </tr>
+                            <tr>
+                                <th>User</th>
+                                <td>{{ audit_log.username_snapshot|default:"System" }}
+                                    {% if audit_log.user %}<span class="text-muted small">(ID: {{ audit_log.user_id }})</span>{% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Action</th>
+                                <td><span class="badge bg-secondary">{{ audit_log.get_action_display }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Severity</th>
+                                <td>
+                                    {% if audit_log.severity == 'CRITICAL' %}
+                                        <span class="badge bg-danger">{{ audit_log.get_severity_display }}</span>
+                                    {% elif audit_log.severity == 'WARNING' %}
+                                        <span class="badge bg-warning">{{ audit_log.get_severity_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">{{ audit_log.get_severity_display }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Module</th>
+                                <td>{{ audit_log.module_name }} / {{ audit_log.model_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Object ID</th>
+                                <td>{{ audit_log.object_id|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Object</th>
+                                <td>{{ audit_log.object_repr|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <th>IP Address</th>
+                                <td>{{ audit_log.ip_address|default:"—" }}</td>
+                            </tr>
+                            <tr>
+                                <th>User Agent</th>
+                                <td class="small text-break">{{ audit_log.user_agent|default:"—" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><strong>Description</strong></div>
+                <div class="card-body">
+                    <p class="mb-0">{{ audit_log.description }}</p>
+                </div>
+            </div>
+        </div>
+
+        {# ---- Changes diff ---- #}
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <strong>Changes</strong>
+                </div>
+                <div class="card-body">
+                    {% if audit_log.formatted_changes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 30%;">Field</th>
+                                        <th style="width: 35%;">Old Value</th>
+                                        <th style="width: 35%;">New Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for field, old_val, new_val in audit_log.formatted_changes %}
+                                        <tr>
+                                            <td><code>{{ field }}</code></td>
+                                            <td class="small">
+                                                {% if old_val is None %}
+                                                    <span class="text-muted">—</span>
+                                                {% else %}
+                                                    {{ old_val }}
+                                                {% endif %}
+                                            </td>
+                                            <td class="small">
+                                                {% if new_val is None %}
+                                                    <span class="text-muted">—</span>
+                                                {% else %}
+                                                    {{ new_val }}
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No field-level changes recorded for this entry.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

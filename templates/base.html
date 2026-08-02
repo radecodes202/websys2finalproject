@@ -39,6 +39,7 @@
                 {# Reports — Admin, Manager #}
                 {% if request.user.is_admin or request.user.is_manager %}
                 <a href="{% url 'reports:sales-report' %}" class="nav-link">Reports</a>
+                <a href="{% url 'audit:audit-log-list' %}" class="nav-link">Audit Log</a>
                 {% endif %}
 
                 {# Pending users — Admin only #}

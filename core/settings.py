@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'supplier',
     'customer',
     'reports',
+    'audit',  # Audit trail / activity log
     'crispy_forms',
     'crispy_bootstrap5',
 ]
@@ -62,6 +63,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'audit.middleware.AuditMiddleware',  # capture user/IP/user-agent for audit logging
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
