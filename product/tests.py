@@ -1,5 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -83,6 +85,35 @@ class ProductReceivingTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.quantity_in_stock, 3)
         self.assertTrue(StockMovement.objects.filter(product=self.product, type='purchase').exists())
+        self.assertEqual(purchase_order.status, 'partial')
+
+    def test_stock_receipt_marks_purchase_order_received_when_all_items_are_received(self):
+        purchase_order = PurchaseOrder.objects.create(
+            supplier=self.supplier,
+            expected_delivery_date=timezone.now().date(),
+            status='pending',
+            created_by=self.user,
+        )
+        purchase_order_item = PurchaseOrderItem.objects.create(
+            purchase_order=purchase_order,
+            product=self.product,
+            quantity_ordered=3,
+            unit_cost=Decimal('18.00'),
+        )
+
+        stock_receipt = StockReceipt.objects.create(
+            purchase_order=purchase_order,
+            received_by=self.user,
+        )
+        StockReceiptItem.objects.create(
+            stock_receipt=stock_receipt,
+            purchase_order_item=purchase_order_item,
+            quantity_received=3,
+        )
+
+        stock_receipt.receive()
+
+        purchase_order.refresh_from_db()
         self.assertEqual(purchase_order.status, 'received')
 
 
@@ -116,7 +147,7 @@ class SaleCheckoutTests(TestCase):
             tax=Decimal('0.00'),
             discount=Decimal('0.00'),
             total=Decimal('75.00'),
-            status='completed',
+            status='pending',
         )
         SaleItem.objects.create(
             sale=sale,
@@ -138,6 +169,41 @@ class SaleCheckoutTests(TestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.quantity_in_stock, 7)
         self.assertTrue(StockMovement.objects.filter(product=self.product, type='sale').exists())
+
+    def test_checkout_failure_rolls_back_stock_and_status_changes(self):
+        sale = Sale.objects.create(
+            cashier=self.user,
+            payment_method='cash',
+            subtotal=Decimal('25.00'),
+            tax=Decimal('0.00'),
+            discount=Decimal('0.00'),
+            total=Decimal('25.00'),
+            status='pending',
+        )
+        SaleItem.objects.create(
+            sale=sale,
+            product=self.product,
+            quantity=3,
+            unit_price=Decimal('25.00'),
+            subtotal=Decimal('75.00'),
+        )
+        Payment.objects.create(
+            sale=sale,
+            amount=Decimal('25.00'),
+            method='cash',
+            reference_number='RCPT-002',
+            change_given=Decimal('0.00'),
+        )
+
+        with patch('product.models.StockMovement.objects.create', side_effect=RuntimeError('boom')):
+            with self.assertRaises(RuntimeError):
+                sale.complete_checkout()
+
+        self.product.refresh_from_db()
+        sale.refresh_from_db()
+        self.assertEqual(self.product.quantity_in_stock, 10)
+        self.assertEqual(sale.status, 'pending')
+        self.assertFalse(StockMovement.objects.exists())
 
 
 class AlertTests(TestCase):

@@ -1,7 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from category.models import Category
@@ -250,71 +250,72 @@ class StockReceipt(models.Model):
         return f'Stock Receipt {self.pk}'
 
     def receive(self):
-        total_received = 0
-        for item in self.items.all():
-            quantity_received = item.quantity_received
-            if quantity_received < 0:
-                raise ValueError('Received quantity cannot be negative.')
+        with transaction.atomic():
+            total_ordered = 0
+            total_received = 0
+            for item in self.items.all():
+                quantity_received = item.quantity_received
+                if quantity_received < 0:
+                    raise ValueError('Received quantity cannot be negative.')
 
-            product = item.purchase_order_item.product
-            old_stock = product.quantity_in_stock
-            product.quantity_in_stock += quantity_received
-            product.save(update_fields=['quantity_in_stock'])
+                purchase_order_item = item.purchase_order_item
+                total_ordered += purchase_order_item.quantity_ordered
+                total_received += quantity_received
 
-            StockMovement.objects.create(
-                product=product,
-                type='purchase',
-                quantity_change=quantity_received,
-                resulting_stock_level=product.quantity_in_stock,
-                reference=f'StockReceipt-{self.pk}',
-            )
+                product = purchase_order_item.product
+                old_stock = product.quantity_in_stock
+                product.quantity_in_stock += quantity_received
+                product.save(update_fields=['quantity_in_stock'])
 
-            # Manual audit log: stock increased due to PO receipt.
-            log_activity(
-                action=AuditLog.ACTION_STOCK_ADJUSTMENT,
-                instance=product,
-                description=(
-                    f'Added {quantity_received} units to {product.name} '
-                    f'due to Stock Receipt #{self.pk} (PO-{self.purchase_order_id}).'
-                ),
-                changes={
-                    'quantity_in_stock': {
-                        'old': old_stock,
-                        'new': product.quantity_in_stock,
+                StockMovement.objects.create(
+                    product=product,
+                    type='purchase',
+                    quantity_change=quantity_received,
+                    resulting_stock_level=product.quantity_in_stock,
+                    reference=f'StockReceipt-{self.pk}',
+                )
+
+                log_activity(
+                    action=AuditLog.ACTION_STOCK_ADJUSTMENT,
+                    instance=product,
+                    description=(
+                        f'Added {quantity_received} units to {product.name} '
+                        f'due to Stock Receipt #{self.pk} (PO-{self.purchase_order_id}).'
+                    ),
+                    changes={
+                        'quantity_in_stock': {
+                            'old': old_stock,
+                            'new': product.quantity_in_stock,
+                        },
+                        'source': f'StockReceipt-{self.pk}',
                     },
-                    'source': f'StockReceipt-{self.pk}',
-                },
-                severity=AuditLog.SEVERITY_INFO,
-            )
+                    severity=AuditLog.SEVERITY_INFO,
+                )
 
-            total_received += quantity_received
+            if total_ordered == 0:
+                new_status = PurchaseOrder.STATUS_PENDING
+            elif total_received < total_ordered:
+                new_status = PurchaseOrder.STATUS_PARTIAL
+            else:
+                new_status = PurchaseOrder.STATUS_RECEIVED
 
-        # Determine the new PO status.
-        if total_received == 0:
-            new_status = PurchaseOrder.STATUS_PENDING
-        elif total_received < self.purchase_order.items.count() and total_received > 0:
-            new_status = PurchaseOrder.STATUS_PARTIAL
-        else:
-            new_status = PurchaseOrder.STATUS_RECEIVED
+            old_status = self.purchase_order.status
+            self.purchase_order.status = new_status
+            self.purchase_order.save(update_fields=['status'])
 
-        old_status = self.purchase_order.status
-        self.purchase_order.status = new_status
-        self.purchase_order.save(update_fields=['status'])
-
-        # Manual audit log: PO status changed by stock receipt.
-        if old_status != new_status:
-            log_activity(
-                action=AuditLog.ACTION_STATUS_CHANGE,
-                instance=self.purchase_order,
-                description=(
-                    f'Purchase Order PO-{self.purchase_order_id} status changed '
-                    f'from "{old_status}" to "{new_status}" via Stock Receipt #{self.pk}.'
-                ),
-                changes={
-                    'status': {'old': old_status, 'new': new_status},
-                },
-                severity=AuditLog.SEVERITY_INFO,
-            )
+            if old_status != new_status:
+                log_activity(
+                    action=AuditLog.ACTION_STATUS_CHANGE,
+                    instance=self.purchase_order,
+                    description=(
+                        f'Purchase Order PO-{self.purchase_order_id} status changed '
+                        f'from "{old_status}" to "{new_status}" via Stock Receipt #{self.pk}.'
+                    ),
+                    changes={
+                        'status': {'old': old_status, 'new': new_status},
+                    },
+                    severity=AuditLog.SEVERITY_INFO,
+                )
 
 
 class StockReceiptItem(models.Model):
@@ -461,57 +462,56 @@ class Sale(models.Model):
         ordering = ['-date']
 
     def complete_checkout(self):
-        for item in self.items.all():
-            if item.quantity > item.product.quantity_in_stock:
-                raise ValueError(f'Insufficient stock for {item.product.name}.')
+        with transaction.atomic():
+            for item in self.items.all():
+                if item.quantity > item.product.quantity_in_stock:
+                    raise ValueError(f'Insufficient stock for {item.product.name}.')
 
-        for item in self.items.all():
-            old_stock = item.product.quantity_in_stock
-            item.product.quantity_in_stock -= item.quantity
-            item.product.save(update_fields=['quantity_in_stock'])
-            StockMovement.objects.create(
-                product=item.product,
-                type='sale',
-                quantity_change=-item.quantity,
-                resulting_stock_level=item.product.quantity_in_stock,
-                reference=f'Sale-{self.pk}',
-            )
+            for item in self.items.all():
+                old_stock = item.product.quantity_in_stock
+                item.product.quantity_in_stock -= item.quantity
+                item.product.save(update_fields=['quantity_in_stock'])
+                StockMovement.objects.create(
+                    product=item.product,
+                    type='sale',
+                    quantity_change=-item.quantity,
+                    resulting_stock_level=item.product.quantity_in_stock,
+                    reference=f'Sale-{self.pk}',
+                )
 
-            # Manual audit log: stock deducted due to sale checkout.
+                log_activity(
+                    action=AuditLog.ACTION_STOCK_ADJUSTMENT,
+                    instance=item.product,
+                    description=(
+                        f'Deducted {item.quantity} units of {item.product.name} '
+                        f'due to Sale #{self.pk}.'
+                    ),
+                    changes={
+                        'quantity_in_stock': {
+                            'old': old_stock,
+                            'new': item.product.quantity_in_stock,
+                        },
+                        'source': f'Sale-{self.pk}',
+                    },
+                    severity=AuditLog.SEVERITY_INFO,
+                )
+
+            old_status = self.status
+            self.status = self.STATUS_COMPLETED
+            self.save(update_fields=['status'])
+
             log_activity(
-                action=AuditLog.ACTION_STOCK_ADJUSTMENT,
-                instance=item.product,
+                action=AuditLog.ACTION_STATUS_CHANGE,
+                instance=self,
                 description=(
-                    f'Deducted {item.quantity} units of {item.product.name} '
-                    f'due to Sale #{self.pk}.'
+                    f'Sale #{self.pk} checkout completed — status changed '
+                    f'from "{old_status}" to "{self.STATUS_COMPLETED}".'
                 ),
                 changes={
-                    'quantity_in_stock': {
-                        'old': old_stock,
-                        'new': item.product.quantity_in_stock,
-                    },
-                    'source': f'Sale-{self.pk}',
+                    'status': {'old': old_status, 'new': self.STATUS_COMPLETED},
                 },
                 severity=AuditLog.SEVERITY_INFO,
             )
-
-        old_status = self.status
-        self.status = self.STATUS_COMPLETED
-        self.save(update_fields=['status'])
-
-        # Manual audit log: sale checkout completed (status change).
-        log_activity(
-            action=AuditLog.ACTION_STATUS_CHANGE,
-            instance=self,
-            description=(
-                f'Sale #{self.pk} checkout completed — status changed '
-                f'from "{old_status}" to "{self.STATUS_COMPLETED}".'
-            ),
-            changes={
-                'status': {'old': old_status, 'new': self.STATUS_COMPLETED},
-            },
-            severity=AuditLog.SEVERITY_INFO,
-        )
 
     def __str__(self):
         return f'Sale {self.pk}'
