@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django import forms
 from django.contrib import messages
-from django.db import models
+from django.db import models, transaction
 from django.shortcuts import redirect, render, get_object_or_404
 from django.views import View
 from django.views.generic import DetailView, ListView, CreateView, UpdateView, DeleteView
@@ -10,7 +10,9 @@ from django.urls import reverse_lazy
 from accounts.mixins import RoleRequiredMixin
 from category.models import Category
 from supplier.models import Supplier
-from .models import Payment, Product, Sale, SaleItem
+from audit.models import AuditLog
+from audit.services import log_activity
+from .models import Alert, Payment, Product, Sale, SaleItem, StockMovement
 
 
 class ProductForm(forms.ModelForm):
@@ -26,6 +28,56 @@ class ProductForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field_name in ['code', 'barcode', 'cost_price', 'unit_of_measure', 'image', 'preferred_supplier']:
             self.fields[field_name].required = False
+
+
+class AlertListView(RoleRequiredMixin, ListView):
+    model = Alert
+    template_name = 'product/alert_list.html'
+    context_object_name = 'alerts'
+    paginate_by = 20
+    allowed_roles = ['admin', 'manager', 'inventory_staff']
+
+    def get_queryset(self):
+        queryset = Alert.objects.select_related('product').all()
+        alert_type = self.request.GET.get('type')
+        if alert_type in dict(Alert.TYPE_CHOICES):
+            queryset = queryset.filter(type=alert_type)
+        is_resolved = self.request.GET.get('resolved')
+        if is_resolved == 'true':
+            queryset = queryset.filter(is_resolved=True)
+        elif is_resolved == 'false':
+            queryset = queryset.filter(is_resolved=False)
+        return queryset.order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['type_choices'] = Alert.TYPE_CHOICES
+        context['selected_type'] = self.request.GET.get('type', '')
+        context['selected_resolved'] = self.request.GET.get('resolved', '')
+        return context
+
+
+class AlertResolveView(RoleRequiredMixin, View):
+    """Mark an alert as resolved."""
+    allowed_roles = ['admin', 'manager', 'inventory_staff']
+
+    def post(self, request, pk):
+        alert = get_object_or_404(Alert, pk=pk)
+        if not alert.is_resolved:
+            alert.is_resolved = True
+            alert.save(update_fields=['is_resolved'])
+            log_activity(
+                user=request.user,
+                action=AuditLog.ACTION_UPDATE,
+                instance=alert,
+                description=f'Alert for {alert.product.name} ({alert.type}) marked as resolved.',
+                changes={'is_resolved': {'old': False, 'new': True}},
+                severity=AuditLog.SEVERITY_INFO,
+            )
+            messages.success(request, 'Alert marked as resolved.')
+        else:
+            messages.info(request, 'Alert is already resolved.')
+        return redirect('product:alert-list')
 
 
 class ProductListView(RoleRequiredMixin, ListView):
@@ -181,13 +233,85 @@ class POSView(RoleRequiredMixin, View):
                 change_given=max(Decimal('0.00'), amount_tendered - total),
             )
 
-            sale.complete_checkout()
+            try:
+                sale.complete_checkout()
+            except ValueError as exc:
+                messages.error(request, str(exc))
+                return redirect('product:pos')
+
             request.session['pos_cart'] = []
             messages.success(request, 'Checkout completed successfully.')
             return redirect('product:receipt', sale.pk)
 
         messages.error(request, 'Unsupported action.')
         return redirect('product:pos')
+
+
+class SaleCancelView(RoleRequiredMixin, View):
+    """Manager or Admin cancels a completed sale and restores stock."""
+    template_name = 'product/sale_confirm_cancel.html'
+    allowed_roles = ['admin', 'manager']
+
+    def get(self, request, pk):
+        sale = get_object_or_404(Sale, pk=pk)
+        if sale.status != Sale.STATUS_COMPLETED:
+            messages.error(request, f'Sale #{sale.pk} cannot be cancelled (status: {sale.get_status_display()}).')
+            return redirect('product:product-list')
+        return render(request, self.template_name, {'sale': sale})
+
+    @transaction.atomic
+    def post(self, request, pk):
+        sale = get_object_or_404(Sale, pk=pk)
+        if sale.status != Sale.STATUS_COMPLETED:
+            messages.error(request, f'Sale #{sale.pk} cannot be cancelled (status: {sale.get_status_display()}).')
+            return redirect('product:product-list')
+
+        for item in sale.items.all():
+            product = item.product
+            old_stock = product.quantity_in_stock
+            product.quantity_in_stock += item.quantity
+            product.save(update_fields=['quantity_in_stock'])
+            product.create_alerts()
+            StockMovement.objects.create(
+                product=product,
+                type='return',
+                quantity_change=item.quantity,
+                resulting_stock_level=product.quantity_in_stock,
+                reference=f'SaleCancel-{sale.pk}',
+            )
+            log_activity(
+                action=AuditLog.ACTION_STOCK_ADJUSTMENT,
+                instance=product,
+                description=(
+                    f'Restored {item.quantity} units of {product.name} '
+                    f'due to Sale #{sale.pk} cancellation.'
+                ),
+                changes={
+                    'quantity_in_stock': {
+                        'old': old_stock,
+                        'new': product.quantity_in_stock,
+                    },
+                    'source': f'SaleCancel-{sale.pk}',
+                },
+                severity=AuditLog.SEVERITY_WARNING,
+            )
+
+        old_status = sale.status
+        sale.status = Sale.STATUS_CANCELLED
+        sale.save(update_fields=['status'])
+        log_activity(
+            action=AuditLog.ACTION_STATUS_CHANGE,
+            instance=sale,
+            description=(
+                f'Sale #{sale.pk} was cancelled — status changed '
+                f'from "{old_status}" to "{Sale.STATUS_CANCELLED}".'
+            ),
+            changes={'status': {'old': old_status, 'new': Sale.STATUS_CANCELLED}},
+            severity=AuditLog.SEVERITY_WARNING,
+        )
+
+        messages.success(request, f'Sale #{sale.pk} has been cancelled and stock restored.')
+        return redirect('product:product-list')
 
 
 def receipt_view(request, pk):

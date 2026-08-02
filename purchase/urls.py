@@ -10,6 +10,8 @@ urlpatterns = [
     path('create/', views.PurchaseOrderCreateView.as_view(), name='purchase-order-create'),
     path('<int:pk>/', views.PurchaseOrderDetailView.as_view(), name='purchase-order-detail'),
     path('<int:pk>/update/', views.PurchaseOrderUpdateView.as_view(), name='purchase-order-update'),
+    path('<int:pk>/approve/', views.PurchaseOrderApproveView.as_view(), name='purchase-order-approve'),
+    path('<int:pk>/reject/', views.PurchaseOrderRejectView.as_view(), name='purchase-order-reject'),
     path('<int:pk>/cancel/', views.PurchaseOrderCancelView.as_view(), name='purchase-order-cancel'),
     path('<int:pk>/receive/', views.StockReceiptView.as_view(), name='purchase-order-receive'),
 ]

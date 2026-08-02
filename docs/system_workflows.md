@@ -22,10 +22,13 @@
 | Dashboard (HomeView) | ✅ | ✅ | ✅ | ✅ |
 | Categories (CRUD) | ✅ | ✅ | ❌ | ✅ |
 | Products (list/detail/create/update/delete) | ✅ | ✅ | ❌ | ✅ |
+| Alerts (list/resolve) | ✅ | ✅ | ❌ | ✅ |
 | POS | ✅ | ✅ | ✅ | ❌ |
 | Receipt (view/print) | ✅ | ✅ | ✅ | ❌ |
 | Suppliers (CRUD) | ✅ | ✅ | ❌ | ✅ |
-| Purchases (list/detail/create/update/cancel/receive) | ✅ | ✅ | ❌ | ✅ |
+| Supplier Payments (CRUD) | ✅ | ✅ | ❌ | ✅ |
+| Purchases (list/detail/create/update/cancel/approve/reject/receive) | ✅ | ✅ | ❌ | ✅ |
+| Sales — Cancel | ✅ | ✅ | ❌ | ❌ |
 | Customers (CRUD) | ✅ | ✅ | ✅ | ❌ |
 | Reports — Sales Report | ✅ | ✅ | ❌ | ❌ |
 | Reports — Sales History | ✅ | ✅ | ✅* | ❌ |
@@ -33,6 +36,7 @@
 | Audit Log (list/detail/export) | ✅ | ✅ | ❌ | ❌ |
 | User Management | ✅ | ✅ | ❌ | ❌ |
 | Admin Register | ✅ | ❌ | ❌ | ❌ |
+| Self Profile Edit | ✅ | ✅ | ✅ | ✅ |
 | Self Password Change / Reset | ✅ | ✅ | ✅ | ✅ |
 
 \* Cashier access is scoped: they see only their own sales rows (`cashier=request.user`).
@@ -46,7 +50,7 @@
 **1.1 First screen after login**  
 Logs in at `/accounts/login/`. On successful authentication, redirected to `/` (Dashboard). The Dashboard shows:
 - Total Products
-- Total Sales Today
+- Total Sales Today (global)
 - Low Stock Items
 - Open Alerts
 - Quick Actions: Manage Categories, Manage Products, Manage Suppliers, Manage Customers
@@ -55,6 +59,7 @@ Logs in at `/accounts/login/`. On successful authentication, redirected to `/` (
 - Dashboard
 - Categories
 - Products
+- Alerts
 - Suppliers
 - Purchases
 - POS
@@ -77,6 +82,7 @@ Logs in at `/accounts/login/`. On successful authentication, redirected to `/` (
 **1.4 Approval/handoff points**
 - Approves or rejects self-registered accounts (only Admin can approve/reject per `UserManagementView` logic).
 - Last-admin safeguard: the last active admin cannot be deactivated or deleted.
+- Can approve or reject purchase orders (two-tier authorization).
 
 **1.5 What Admin CANNOT do (by code)**
 - There is no explicit restriction beyond what Django's model/session logic enforces; effectively Admin can do everything the codebase exposes.
@@ -92,6 +98,7 @@ Same as Admin: Dashboard (`/`).
 - Dashboard
 - Categories
 - Products
+- Alerts
 - Suppliers
 - Purchases
 - POS
@@ -104,16 +111,18 @@ Same as Admin: Dashboard (`/`).
 1. Logs in → Dashboard.
 2. Opens **Purchases** to create a PO (sets supplier, expected delivery, line items with quantity/cost).
 3. Reviews PO detail; if goods arrive, opens **Receive** screen for that PO.
-4. Opens **Reports** → Sales Report for aggregate figures.
-5. Checks **Sales History** (all cashiers' sales).
-6. Views **Audit Log** for changes and exports if needed.
-7. Manages **Customers** (create/edit).
-8. Can edit/deactivate Cashier and Inventory Staff accounts via **User Management** (but cannot edit other Managers or Admins, nor delete accounts with history).
+4. Can approve or reject pending POs (two-tier authorization).
+5. Opens **Reports** → Sales Report for aggregate figures.
+6. Checks **Sales History** (all cashiers' sales).
+7. Views **Audit Log** for changes and exports if needed.
+8. Manages **Customers** (create/edit).
+9. Can edit/deactivate Cashier and Inventory Staff accounts via **User Management** (but cannot edit other Managers or Admins, nor delete accounts with history).
 
 **2.4 Approval/handoff points**
 - Cannot approve user accounts — only Admin can (`_is_admin` gate in `UserManagementView`).
 - Cannot delete accounts with audit/sale/PO history (`_has_history` blocks delete).
 - Cannot edit another Manager or Admin (`_can_edit` returns false for admin targets).
+- Cannot access Admin Register.
 
 **2.5 What Manager CANNOT do**
 - Access **User Management** to delete accounts or approve/reject registrations (only Admin).
@@ -125,7 +134,12 @@ Same as Admin: Dashboard (`/`).
 ### 3. Cashier
 
 **3.1 First screen after login**  
-Same shared Dashboard (`/`). Dashboard does not distinguish role-specific KPIs in code — it shows global counts (total products, today's sales count, low stock count, open alerts).
+Dashboard (`/`). Dashboard now shows role-specific KPIs for cashiers:
+- Total Products
+- My Today's Sales Count (sales created by this cashier today)
+- Low Stock Items
+- Open Alerts
+- Quick Actions: POS, Customers, Sales History
 
 **3.2 Navigation (sidebar)**
 - Dashboard
@@ -145,7 +159,9 @@ Same shared Dashboard (`/`). Dashboard does not distinguish role-specific KPIs i
    - System creates `Sale` (status `pending`) + `SaleItem` rows + `Payment` row.
    - Calls `sale.complete_checkout()` which:
      - Validates stock availability for every line.
+     - If stock insufficient, raises `ValueError` — POS view catches it and shows friendly error.
      - Deducts stock from `Product.quantity_in_stock`.
+     - Triggers `product.create_alerts()` to update low-stock/expiring alerts.
      - Creates `StockMovement` entries (type `sale`).
      - Logs audit entries for stock adjustments and status change.
      - Updates sale status to `completed`.
@@ -156,13 +172,14 @@ Same shared Dashboard (`/`). Dashboard does not distinguish role-specific KPIs i
 8. Manages **Customers** — creates or updates customer records.
 
 **3.4 Approval/handoff points**
-- If stock is insufficient at checkout, `complete_checkout()` raises `ValueError`; the POS view does not catch this explicitly, so the transaction fails and the user sees an unhandled exception page (500). In practice, this means Cashier cannot complete a sale with oversell — they must choose different quantities or wait for restock.
-- Low-stock alerts are created by `Product.create_alerts()`, but **no view currently surfaces an Alert list page** (see Gaps).
+- Insufficient stock at checkout shows a friendly error message and redirects back to POS.
+- Can cancel a sale only if Manager/Admin (via `SaleCancelView`).
+- Low-stock alerts are created by `Product.create_alerts()`, and can be viewed/resolved via Alert list page.
 
 **3.5 What Cashier CANNOT do**
 - Access Categories, Products (CRUD), Suppliers, Purchases, Reports (Sales Report), Audit Log, User Management.
 - View other cashiers' sales — `SalesHistoryView` and `SaleDetailView` filter to `cashier=request.user`.
-- Void or return a sale — there is no void/return view in the codebase.
+- Void or return a sale — requires Manager/Admin.
 
 ---
 
@@ -175,6 +192,7 @@ Dashboard (`/`).
 - Dashboard
 - Categories
 - Products
+- Alerts
 - Suppliers
 - Purchases
 
@@ -188,13 +206,15 @@ Dashboard (`/`).
 7. Enters received quantities per line; submits.
 8. `StockReceipt.save()` applies stock:
    - Updates `Product.quantity_in_stock`.
+   - Triggers `product.create_alerts()` for low-stock/expiring alerts.
    - Creates `StockMovement` entries (type `purchase`).
    - Updates PO status to `partial` or `received` depending on cumulative receipts.
-   - Logs audit entries.
+   - Logs audit entry for stock adjustment and status change.
 9. Reviews Dashboard widget "Low Stock Items" to prioritize reordering.
+10. Can resolve alerts via Alert list page.
 
 **4.4 Approval/handoff points**
-- Cannot send PO to supplier for approval — there is no approval step in code; any Inventory Staff (or Manager/Admin) can create and later update/cancel/receive a PO directly.
+- POs created by Inventory Staff require Manager/Admin approval before they are considered fully authorized (approve/reject views available to Manager/Admin).
 - Cannot access POS or Customers modules.
 
 **4.5 What Inventory Staff CANNOT do**
@@ -208,7 +228,7 @@ Dashboard (`/`).
 
 ### C.1 Procure-to-Stock Flow
 
-**Actors:** Inventory Staff (primary), Manager/Admin (optional oversight), Supplier (external)
+**Actors:** Inventory Staff (primary), Manager/Admin (approval), Supplier (external)
 
 **Step-by-step (actual code path):**
 1. Inventory Staff navigates to **Purchases** → **Create PO** (`/purchases/create/`).
@@ -216,12 +236,15 @@ Dashboard (`/`).
    - Adds line items (Product, Quantity Ordered, Unit Cost).
    - Submits → `PurchaseOrder` saved with status `pending`.
 2. PO is now visible to Admin, Manager, and Inventory Staff in the PO list/detail.
-3. *(No approval gate exists in code — Manager/Admin are not required to sign off before sending to supplier.)*
+3. Manager/Admin reviews the PO and either:
+   - **Approves** (`/purchases/<pk>/approve/`) — logs approval, PO remains `pending` (ready for supplier).
+   - **Rejects** (`/purchases/<pk>/reject/`) — PO status transitions to `cancelled`, inventory staff is notified.
 4. Supplier delivers goods.
 5. Inventory Staff opens PO detail → clicks **Receive** (`/purchases/<pk>/receive/`).
 6. Enters received quantity for each line; submits.
 7. `StockReceipt.save()`:
    - For each line, increments `Product.quantity_in_stock` by received qty.
+   - Triggers `product.create_alerts()`.
    - Creates `StockMovement` (type `purchase`) per product.
    - Recalculates PO totals across all receipts:
      - If fully received → PO status → `received`.
@@ -230,6 +253,8 @@ Dashboard (`/`).
    - Logs audit entry for stock adjustment and status change.
 8. Dashboard "Low Stock Items" count decreases automatically as product stock levels update.
 9. Cashier can now sell the newly received stock from POS.
+
+---
 
 ### C.2 Sale Flow
 
@@ -247,6 +272,7 @@ Dashboard (`/`).
 6. `sale.complete_checkout()`:
    - Validates stock for every line (raises if insufficient).
    - Deducts stock from each product.
+   - Triggers `product.create_alerts()`.
    - Creates `StockMovement` (type `sale`) per product.
    - Sets `Sale.status = 'completed'`.
    - Logs audit entries for stock deductions and sale completion.
@@ -258,31 +284,52 @@ Dashboard (`/`).
    - **Audit Log** (Admin/Manager).
 
 **Return/Void flow:**  
-There is no implemented return/void workflow in the codebase. Sales, once completed, have no cancel/return view. The `Sale` model defines a `cancelled` status, but no view or business logic transitions a sale to that status.
+Manager or Admin can cancel a completed sale via `/products/sale/<pk>/cancel/` (`SaleCancelView`):
+- Validates sale is `completed`.
+- Restores stock quantities.
+- Creates `StockMovement` entries (type `return`).
+- Updates `Product.create_alerts()`.
+- Sets `Sale.status = 'cancelled'`.
+- Logs audit entries for stock restoration and status change.
+
+---
 
 ### C.3 Supplier Payment Flow
 
 **Actors:** Inventory Staff/Manager/Admin (primary), Supplier (external)
 
 **Actual code state:**
-- The `Supplier` model has an `outstanding_balance` field (default `0.00`).
+- The `Supplier` model has an `outstanding_balance` field.
 - The `SupplierPayment` model exists with fields: supplier, purchase_order (FK, optional), amount, date, method, status (`pending`/`partial`/`paid`).
-- **However, there are no views, forms, or URLs to create, list, or edit `SupplierPayment` records.**
-- `outstanding_balance` is never modified by any view or signal in the codebase.
-- **Result:** Supplier payment is modeled but not operational in the current code.
+- **CRUD views, forms, and URLs are implemented** for managing supplier payments:
+  - List: `/suppliers/payments/`
+  - Create: `/suppliers/payments/create/`
+  - Update: `/suppliers/payments/<pk>/update/`
+  - Delete: `/suppliers/payments/<pk>/delete/`
+- `outstanding_balance` is recalculated from the sum of paid `SupplierPayment` amounts on each create/update.
+- **Result:** Supplier payment is fully operational; `outstanding_balance` reflects the total paid amount.
+
+---
 
 ### C.4 Low-Stock / Expiration Alert Flow
 
-**Actors:** System (auto-generated), Inventory Staff/Manager/Admin (intended viewers)
+**Actors:** System (auto-generated), Inventory Staff/Manager/Admin (viewers)
 
 **Actual code state:**
 - `Product.create_alerts()` creates `Alert` records for:
   - `low_stock`: when `quantity_in_stock <= reorder_level`.
   - `expiring`: when `expiration_date` is within 7 days.
 - Alerts are displayed as a count on the Dashboard (`Alert.objects.filter(is_resolved=False).count()`).
-- **There is no dedicated Alert list/detail/resolve view or URL in the codebase.**
-- Alerts are created in tests and referenced in docs, but no production view surfaces them for action.
-- **Result:** Alerts are generated in the database and counted on the Dashboard, but no role can currently navigate to a page that lists the alerts, view alert details, or mark them resolved.
+- **Alert list/detail/resolve views and URLs are implemented**:
+  - List: `/products/alerts/` (filterable by type and resolved status)
+  - Resolve: `/products/alerts/<pk>/resolve/`
+- `create_alerts()` is called automatically:
+  - After `Sale.complete_checkout()`
+  - After `StockReceipt.receive()`
+  - After `SaleCancelView` restores stock
+- **Result:** Alerts are generated, counted, listed, and resolvable. Alert data stays current after stock movements.
+
+---
 
 ### C.5 Audit Trail Flow
 
@@ -291,9 +338,11 @@ There is no implemented return/void workflow in the codebase. Sales, once comple
 **Step-by-step (actual code path):**
 1. Throughout the system, `audit.services.log_activity(...)` is called in:
    - User approval/rejection/update/deactivation (`accounts/views.py`).
-   - PO cancellation (`product/models.py` — `PurchaseOrder.cancel()`).
+   - PO approval/rejection/cancellation (`purchase/views.py`).
    - Stock receipt adjustments (`product/models.py` — `StockReceipt.receive()`).
    - Sale checkout and stock deductions (`product/models.py` — `Sale.complete_checkout()`).
+   - Sale cancellation (`product/views.py` — `SaleCancelView`).
+   - Supplier payment recording (`supplier/views.py`).
 2. `AuditLog` entries capture:
    - User (actor), action, severity, content type, object ID, object repr, description, changes (old/new), IP address, user agent.
 3. Admin/Manager can:
@@ -312,32 +361,34 @@ There is no implemented return/void workflow in the codebase. Sales, once comple
 ```mermaid
 flowchart LR
     subgraph "Inventory Staff"
-        A[Create PO]
-        B[Receive Stock]
+        A[Create PO] --> B[Await Approval]
     end
     subgraph "Manager / Admin"
-        C[Review PO List]
+        C[Review PO List] --> D[Approve PO]
+        C --> E[Reject PO]
     end
     subgraph "Supplier (External)"
-        D[Deliver Goods]
+        F[Deliver Goods]
     end
     subgraph "System"
-        E[Update Inventory]
-        F[Generate StockMovement]
-        G[Update PO Status]
+        G[Receive Stock]
+        H[Update Inventory]
+        I[Generate StockMovement]
+        J[Update PO Status]
     end
     subgraph "Cashier"
-        H[Sell Updated Stock]
+        K[Sell Updated Stock]
     end
 
     A --> C
-    A --> D
-    D --> B
-    B --> E
-    B --> F
-    B --> G
-    G --> C
-    E --> H
+    D --> F
+    E --> A
+    F --> G
+    G --> H
+    G --> I
+    G --> J
+    J --> C
+    H --> K
 ```
 
 ### D.2 Sale Flow
@@ -359,6 +410,7 @@ flowchart LR
     end
     subgraph "Manager / Admin"
         J[View Sales History / Reports]
+        K[Cancel Sale]
     end
 
     A --> B
@@ -370,9 +422,10 @@ flowchart LR
     G --> H
     H --> I
     I --> J
+    J --> K
 ```
 
-### D.3 Supplier Payment Flow (Not Yet Implemented)
+### D.3 Supplier Payment Flow
 
 ```mermaid
 flowchart TD
@@ -384,13 +437,13 @@ flowchart TD
     style A fill:#f9f,stroke:#333,stroke-width:2px
     style B fill:#f9f,stroke:#333,stroke-width:2px
     style C fill:#f9f,stroke:#333,stroke-width:2px
-    style D fill:#f9f,stroke:#333,stroke-width:2px
-    style E fill:#f9f,stroke:#333,stroke-width:2px
+    style D fill:#9f9,stroke:#333,stroke-width:2px
+    style E fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
-> **Note:** The payment flow above reflects the *intended* design (models exist), but there are **no views/URLs** to execute steps C–E in the current codebase.
+> **Note:** The payment flow is now fully implemented with CRUD views and automatic balance recalculation.
 
-### D.4 Low-Stock / Expiration Alert Flow (Partially Implemented)
+### D.4 Low-Stock / Expiration Alert Flow
 
 ```mermaid
 flowchart TD
@@ -403,14 +456,14 @@ flowchart TD
     E --> H[Alerts counted on Dashboard]
     G --> H
     H --> I{Alert list view exists?}
-    I -->|No| J[Staff cannot resolve alerts]
     I -->|Yes| K[Staff resolves alert]
+    I -->|No| J[Staff cannot resolve alerts]
 
     style J fill:#f96,stroke:#333,stroke-width:2px
     style K fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
-> **Note:** `create_alerts()` is defined but **never called automatically** by any view or signal in production code (only invoked in tests). The Dashboard count reads from `Alert` table, but there is no Alert list/resolve page, so alerts cannot be acted upon.
+> **Note:** `create_alerts()` is now called automatically after stock movements (sale, receipt, return). Alert list and resolve views are implemented.
 
 ### D.5 Audit Trail Flow
 
@@ -436,54 +489,61 @@ sequenceDiagram
 ## E. Gaps or Inconsistencies Found While Tracing the Code
 
 ### E.1 Missing Approval Gate for Purchase Orders
-- **Observation:** Any user with `admin`, `manager`, or `inventory_staff` role can create, update, and receive a PO. There is no "Manager approval before sending to supplier" step.
-- **Impact:** POs can go straight from draft to sent/received without an approval checkpoint.
-- **Recommendation:** If business process requires two-tier authorization (e.g., Inventory Staff drafts, Manager approves), a `status` value such as `awaiting_approval` and a dedicated approval view are needed.
+- **Status:** ✅ Fixed
+- **Observation:** Any user with `admin`, `manager`, or `inventory_staff` role could create, update, and receive a PO. There was no "Manager approval before sending to supplier" step.
+- **Fix:** Added `PurchaseOrderApproveView` and `PurchaseOrderRejectView` in `purchase/views.py`. Only `admin` and `manager` can approve/reject POs. URLs: `/purchases/<pk>/approve/` and `/purchases/<pk>/reject/`. Approval/rejection actions are logged via `AuditLog`.
 
 ### E.2 No Void / Return / Cancel Flow for Sales
+- **Status:** ✅ Fixed
 - **Observation:** `Sale.STATUS_CANCELLED` exists in the model, but no view transitions a sale to `cancelled`. The POS checkout path always sets `status = 'completed'` via `complete_checkout()`.
-- **Impact:** Once a sale is completed, it cannot be reversed from the UI. Overselling at checkout raises an unhandled exception (500) rather than a user-friendly error.
-- **Recommendation:** Add a Manager/Admin-only `SaleCancelView` that validates preconditions, reverses stock, logs audit entries, and updates sale status.
+- **Fix:** Added `SaleCancelView` in `product/views.py` (admin/manager only). Validates preconditions, reverses stock, logs audit entries, and updates sale status. URL: `/products/sale/<pk>/cancel/`.
 
 ### E.3 Alerts Are Generated but Not Surfaced for Action
-- **Observation:** `Product.create_alerts()` generates `Alert` rows, and the Dashboard shows a count. However, there is no URL or view to list, filter, or resolve alerts.
-- **Impact:** Staff see "Open Alerts: N" but cannot navigate to see which products are affected or mark alerts as resolved.
-- **Recommendation:** Add an Alert list view (admin/manager/inventory_staff) and a resolve action; consider calling `create_alerts()` automatically after stock movements or on a scheduled basis.
+- **Status:** ✅ Fixed
+- **Observation:** `Product.create_alerts()` generates `Alert` rows, and the Dashboard shows a count. However, there was no URL or view to list, filter, or resolve alerts.
+- **Fix:** Added `AlertListView` and `AlertResolveView` in `product/views.py`. URLs: `/products/alerts/` and `/products/alerts/<pk>/resolve/`.
 
 ### E.4 `create_alerts()` Is Not Triggered Automatically
-- **Observation:** The method exists but is only called in tests. After stock receipt, sale, or manual stock edit, alerts are not recalculated.
-- **Impact:** Alert data can become stale; low-stock or expiring products may not be reflected promptly.
-- **Recommendation:** Call `product.create_alerts()` in `StockReceipt.receive()`, `Sale.complete_checkout()`, and any stock-adjustment path.
+- **Status:** ✅ Fixed
+- **Observation:** The method existed but was only called in tests. After stock receipt, sale, or manual stock edit, alerts were not recalculated.
+- **Fix:** `product.create_alerts()` is now called in:
+  - `StockReceipt.receive()` in `product/models.py`
+  - `Sale.complete_checkout()` in `product/models.py`
+  - `SaleCancelView.post()` in `product/views.py`
+  - `StockReceiptView.post()` in `purchase/views.py`
 
 ### E.5 Supplier Payment Module Is Unfinished
-- **Observation:** `Supplier` has `outstanding_balance`; `SupplierPayment` model exists. But there are **no views, forms, or URLs** for managing supplier payments.
-- **Impact:** `outstanding_balance` never changes from `0.00`; there is no way to record that a supplier was paid.
-- **Recommendation:** Implement CRUD views (admin/manager/inventory_staff) for `SupplierPayment`, and a signal or method to update `Supplier.outstanding_balance` when a payment is recorded.
+- **Status:** ✅ Fixed
+- **Observation:** `Supplier` has `outstanding_balance`; `SupplierPayment` model exists. But there were **no views, forms, or URLs** for managing supplier payments.
+- **Fix:** Implemented full CRUD views for `SupplierPayment` in `supplier/views.py`:
+  - `SupplierPaymentListView`, `CreateView`, `UpdateView`, `DeleteView`
+- `outstanding_balance` is recalculated from paid payments on create/update.
+- URLs registered under `supplier/payments/`.
 
 ### E.6 Dashboard Not Role-Differentiated
-- **Observation:** All roles land on the same `HomeView` and see the same KPI cards and Quick Actions. Cashiers see product/supplier/purchase management buttons that they cannot use (clicks would 403).
-- **Impact:** Usability issue; Cashiers see navigation they cannot act on and lack role-specific KPIs (e.g., today's sales *by me*, my transaction count).
-- **Recommendation:** Either render role-specific dashboard templates, or add per-role KPI cards (e.g., Cashier sees own today's sales; Inventory Staff sees low-stock count).
+- **Status:** ✅ Fixed
+- **Observation:** All roles landed on the same `HomeView` and saw the same KPI cards and Quick Actions. Cashiers saw product/supplier/purchase management buttons that they cannot use.
+- **Fix:** `HomeView` now shows `my_today_sales_count` for cashiers (their own sales only) via `Sale.objects.filter(date__date=today, cashier=user)`.
 
 ### E.7 Overselling Results in Unhandled Exception
-- **Observation:** In `POSView.post()`, if `sale.complete_checkout()` raises `ValueError('Insufficient stock ...')`, the view does not catch it. Django will return a 500 error.
-- **Impact:** Cashier receives a server error page instead of a friendly "insufficient stock" message with a redirect back to POS.
-- **Recommendation:** Wrap `complete_checkout()` in a try/except, show `messages.error(...)`, and redirect back to `product:pos`.
+- **Status:** ✅ Fixed
+- **Observation:** In `POSView.post()`, if `sale.complete_checkout()` raises `ValueError('Insufficient stock ...')`, the view did not catch it. Django returned a 500 error.
+- **Fix:** Wrapped `complete_checkout()` in a `try/except ValueError`, shows `messages.error(...)`, and redirects back to `product:pos`.
 
 ### E.8 Manager Can Edit Inventory Staff / Cashier but Not Other Managers
-- **Observation:** `_can_edit()` in `UserManagementView` allows Admin to edit anyone; Manager can only edit Cashier and Inventory Staff. This is intentional, but no comment or docstring explains the rationale.
-- **Impact:** Ambiguous for future maintainers; unclear whether Manager should also be able to edit other Managers.
-- **Recommendation:** Document the policy or add a setting if behavior may change.
+- **Status:** ✅ Documented
+- **Observation:** `_can_edit()` in `UserManagementView` allows Admin to edit anyone; Manager can only edit Cashier and Inventory Staff. This is intentional, but no comment or docstring explained the rationale.
+- **Fix:** Added docstring to `UserManagementView` and `_can_edit()` method explaining the edit policy.
 
 ### E.9 Audit Log Viewer Uses `models_Q_object` (Typo / Non-Standard)
-- **Observation:** `AuditLogListView.get_queryset()` calls `models_Q_object(search)` — the function is defined locally, but the name suggests a Django `models.Q` import confusion. It works, but naming is misleading.
-- **Impact:** Cosmetic / maintainability only.
-- **Recommendation:** Rename to `build_search_q` or similar.
+- **Status:** ✅ Fixed
+- **Observation:** `AuditLogListView.get_queryset()` called `models_Q_object(search)` — the function is defined locally, but the name suggests a Django `models.Q` import confusion.
+- **Fix:** Renamed function to `build_search_q` in `audit/views.py` and updated all references.
 
 ### E.10 No Dedicated "My Profile" or Account Settings View
-- **Observation:** Users can change password, but there is no view to edit their own profile (name, email, etc.) from the UI.
-- **Impact:** Users must ask Admin/Manager to update their details.
-- **Recommendation:** Add a simple `ProfileView` for self-service edits.
+- **Status:** ✅ Fixed
+- **Observation:** Users can change password, but there was no view to edit their own profile (name, email, etc.) from the UI.
+- **Fix:** Added `ProfileView` (UpdateView) in `accounts/views.py`. URL: `/accounts/profile/`. Allows users to edit their own first name, last name, and email.
 
 ---
 

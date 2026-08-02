@@ -12,4 +12,7 @@ urlpatterns = [
     path('<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
     path('<int:pk>/update/', views.ProductUpdateView.as_view(), name='product-update'),
     path('<int:pk>/delete/', views.ProductDeleteView.as_view(), name='product-delete'),
+    path('sale/<int:pk>/cancel/', views.SaleCancelView.as_view(), name='sale-cancel'),
+    path('alerts/', views.AlertListView.as_view(), name='alert-list'),
+    path('alerts/<int:pk>/resolve/', views.AlertResolveView.as_view(), name='alert-resolve'),
 ]

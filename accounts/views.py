@@ -14,7 +14,7 @@ from django.contrib.auth.views import (
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import ListView, TemplateView
+from django.views.generic import ListView, TemplateView, UpdateView
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils import timezone
@@ -35,11 +35,21 @@ class HomeView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         today = timezone.localdate()
+        user = self.request.user
 
+        # Common KPIs
         context['product_count'] = Product.objects.count()
-        context['today_sales_count'] = Sale.objects.filter(date__date=today).count()
         context['low_stock_count'] = Product.objects.filter(quantity_in_stock__lte=models.F('reorder_level')).count()
         context['alerts_count'] = Alert.objects.filter(is_resolved=False).count()
+
+        # Role-specific KPIs
+        if getattr(user, 'role', None) == 'cashier':
+            context['today_sales_count'] = Sale.objects.filter(date__date=today, cashier=user).count()
+            context['my_today_sales_count'] = Sale.objects.filter(date__date=today, cashier=user).count()
+        else:
+            context['today_sales_count'] = Sale.objects.filter(date__date=today).count()
+            context['my_today_sales_count'] = None
+
         return context
 
 
@@ -126,7 +136,13 @@ class AdminRegisterView(RoleRequiredMixin, View):
 
 
 class UserManagementView(RoleRequiredMixin, View):
-    """Admin/Manager page for managing users with full edit, deactivate, and delete."""
+    """Admin/Manager page for managing users with full edit, deactivate, and delete.
+
+    Edit policy:
+      * Admin can edit any user.
+      * Manager can only edit Cashier and Inventory Staff accounts.
+      This restriction prevents Managers from escalating their own privileges.
+    """
     template_name = 'accounts/user_management.html'
     allowed_roles = ['admin', 'manager']
 
@@ -266,6 +282,10 @@ class UserManagementView(RoleRequiredMixin, View):
         return False
 
     def _can_edit(self, actor, target):
+        """Check if actor can edit target.
+
+        Admin can edit anyone. Manager can edit Cashier and Inventory Staff only.
+        """
         if self._is_admin(actor):
             return True
         if self._is_admin(target):
@@ -299,6 +319,21 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
 
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
     template_name = 'accounts/password_reset_complete.html'
+
+
+class ProfileView(RoleRequiredMixin, UpdateView):
+    """Allow a logged-in user to edit their own profile."""
+    model = User
+    template_name = 'accounts/profile_form.html'
+    fields = ['first_name', 'last_name', 'email']
+    success_url = reverse_lazy('home')
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Profile updated successfully.')
+        return super().form_valid(form)
 
 
 # Password change views using Django's built-in views

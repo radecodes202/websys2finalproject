@@ -56,7 +56,7 @@ class AuditLogListView(RoleRequiredMixin, ListView):
         search = self.request.GET.get('search')
         if search:
             qs = qs.filter(
-                models_Q_object(search)
+                build_search_q(search)
             )
 
         return qs
@@ -84,7 +84,7 @@ class AuditLogListView(RoleRequiredMixin, ListView):
         return context
 
 
-def models_Q_object(search):
+def build_search_q(search):
     """Build a Q object for searching object_repr and description."""
     from django.db.models import Q
     return Q(object_repr__icontains=search) | Q(description__icontains=search)

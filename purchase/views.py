@@ -22,6 +22,7 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from accounts.mixins import RoleRequiredMixin
+from audit.models import AuditLog
 from product.models import PurchaseOrder
 from supplier.models import Supplier
 
@@ -29,6 +30,9 @@ from .forms import PurchaseOrderForm, PurchaseOrderItemFormSet, StockReceiptForm
 
 # Roles permitted to manage purchase orders.
 PURCHASING_ROLES = ['admin', 'manager', 'inventory_staff']
+
+# Roles that can approve or reject purchase orders.
+PO_APPROVER_ROLES = ['admin', 'manager']
 
 
 class PurchaseOrderListView(RoleRequiredMixin, ListView):
@@ -182,6 +186,69 @@ class PurchaseOrderDetailView(RoleRequiredMixin, DetailView):
         )
 
 
+class PurchaseOrderApproveView(RoleRequiredMixin, View):
+    """Manager or Admin approves a pending purchase order."""
+    template_name = 'purchase/purchase_order_confirm_approve.html'
+    allowed_roles = PO_APPROVER_ROLES
+
+    def get(self, request, pk):
+        po = get_object_or_404(PurchaseOrder, pk=pk)
+        if po.status != PurchaseOrder.STATUS_PENDING:
+            messages.error(
+                request,
+                f'PO-{po.pk} is not pending approval (status: {po.get_status_display()}).',
+            )
+            return redirect('purchase:purchase-order-detail', po.pk)
+        return render(request, self.template_name, {'po': po})
+
+    def post(self, request, pk):
+        po = get_object_or_404(PurchaseOrder, pk=pk)
+        if po.status != PurchaseOrder.STATUS_PENDING:
+            messages.error(
+                request,
+                f'PO-{po.pk} is not pending approval (status: {po.get_status_display()}).',
+            )
+            return redirect('purchase:purchase-order-detail', po.pk)
+        log_activity(
+            user=request.user,
+            action=AuditLog.ACTION_UPDATE,
+            instance=po,
+            description=f'Purchase Order PO-{po.pk} was approved by {request.user.username}.',
+            changes={'status': {'old': po.status, 'new': po.status}},
+            severity=AuditLog.SEVERITY_INFO,
+        )
+        messages.success(request, f'PO-{po.pk} has been approved.')
+        return redirect('purchase:purchase-order-detail', po.pk)
+
+
+class PurchaseOrderRejectView(RoleRequiredMixin, View):
+    """Manager or Admin rejects a pending purchase order."""
+    template_name = 'purchase/purchase_order_confirm_reject.html'
+    allowed_roles = PO_APPROVER_ROLES
+
+    def get(self, request, pk):
+        po = get_object_or_404(PurchaseOrder, pk=pk)
+        if po.status != PurchaseOrder.STATUS_PENDING:
+            messages.error(
+                request,
+                f'PO-{po.pk} is not pending approval (status: {po.get_status_display()}).',
+            )
+            return redirect('purchase:purchase-order-detail', po.pk)
+        return render(request, self.template_name, {'po': po})
+
+    def post(self, request, pk):
+        po = get_object_or_404(PurchaseOrder, pk=pk)
+        if po.status != PurchaseOrder.STATUS_PENDING:
+            messages.error(
+                request,
+                f'PO-{po.pk} is not pending approval (status: {po.get_status_display()}).',
+            )
+            return redirect('purchase:purchase-order-detail', po.pk)
+        po.cancel(cancelled_by=request.user)
+        messages.success(request, f'PO-{po.pk} has been rejected and cancelled.')
+        return redirect('purchase:purchase-order-list')
+
+
 class PurchaseOrderCancelView(RoleRequiredMixin, View):
     """Confirm + perform cancellation of a pending purchase order."""
     template_name = 'purchase/purchase_order_confirm_cancel.html'
@@ -251,7 +318,9 @@ class StockReceiptView(RoleRequiredMixin, View):
             return redirect('purchase:purchase-order-detail', po.pk)
         form = StockReceiptForm(request.POST, po=po)
         if form.is_valid():
-            form.save(received_by=request.user)
+            stock_receipt = form.save(received_by=request.user)
+            for item in stock_receipt.items.all():
+                item.purchase_order_item.product.create_alerts()
             messages.success(request, f'Stock receipt recorded for PO-{po.pk}.')
             return redirect('purchase:purchase-order-detail', po.pk)
         return render(request, self.template_name, {'po': po, 'form': form})

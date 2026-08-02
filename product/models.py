@@ -367,6 +367,7 @@ class StockReceipt(models.Model):
                 old_stock = product.quantity_in_stock
                 product.quantity_in_stock += quantity_received
                 product.save(update_fields=['quantity_in_stock'])
+                product.create_alerts()
 
                 StockMovement.objects.create(
                     product=product,
@@ -580,6 +581,7 @@ class Sale(models.Model):
                 old_stock = item.product.quantity_in_stock
                 item.product.quantity_in_stock -= item.quantity
                 item.product.save(update_fields=['quantity_in_stock'])
+                item.product.create_alerts()
                 StockMovement.objects.create(
                     product=item.product,
                     type='sale',
