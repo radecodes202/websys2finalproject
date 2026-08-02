@@ -9,7 +9,7 @@ services:
       - key: DJANGO_ENV
         value: "prod"
       - key: SECRET_KEY
-        value: django-insecure-change-me
+        value: 7ssgzad3r=pd5x#(f-^pcbw==+#4+5s_-!v7np1(39(kr)h(5=
       - key: DEBUG
         value: "False"
       - key: USE_SQLITE
@@ -19,12 +19,12 @@ services:
       - key: DB_ENGINE
         value: django.db.backends.postgresql
       - key: DB_NAME
-        sync: false
+        sync: true
       - key: DB_USER
-        sync: false
+        sync: true
       - key: DB_PASSWORD
-        sync: false
+        sync: true
       - key: DB_HOST
-        sync: false
+        sync: true
       - key: DB_PORT
         value: "5432"
