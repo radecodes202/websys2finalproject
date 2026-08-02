@@ -2,9 +2,9 @@
 
 A Django-based inventory, sales, and supplier management system for small businesses.
 
-> **Project health:** automated test suite passes — **31 tests, 0 failures** (Django 5.2).
+> **Project health:** automated test suite passes — **80 tests, 0 failures** (Django 5.2).
 > 
-> *(The obsolete `accounts.ActivityLog` model was removed in Step 1; the audit trail now lives in the dedicated `audit/` app.)*
+> *(The obsolete `accounts.ActivityLog` model was removed; the audit trail now lives in the dedicated `audit/` app.)*
 
 ## Features
 
@@ -17,7 +17,9 @@ A Django-based inventory, sales, and supplier management system for small busine
 - **Audit trail** in the dedicated `audit/` app recording `create`/`update`/`delete`/`login`/`logout` actions with before/after JSON snapshots
 
 ### Dashboard
-- Summary cards: **Total Products**, **Total Sales Today**, **Low Stock Items**, **Open Alerts**
+- Summary cards: **Total Products**, **Total Sales**, **Low Stock Items**, **Open Alerts**, **Today's Profit**, **Pending POs**
+- Date-range filter for sales
+- Visual analytics with Chart.js: sales trend, top-selling products, sales by category, profit margin trend
 - Role-gated quick-action buttons and sidebar navigation
 
 ### Inventory & Purchasing
@@ -36,7 +38,13 @@ A Django-based inventory, sales, and supplier management system for small busine
 - Customer CRUD
 
 ### Reporting
-- Sales report page listing sales with line items and payments (Admin & Manager)
+- Sales report with period filters (day/week/month/custom) and totals
+- Sales history with advanced filtering and pagination
+- Inventory valuation report
+- Stock movement report with filters
+- Supplier payment outstanding report
+- Profit & loss summary
+- PDF and Excel export for sales and inventory reports
 
 ### Data & Operations
 - Environment-backed settings — SQLite for local development, PostgreSQL for production
@@ -96,8 +104,8 @@ Browser security defaults are enabled and verified by tests:
 - `SECRET_KEY`, `DEBUG`, and database credentials are read from environment variables.
 
 ## Testing
-Run the full suite (31 tests):
-`py manage.py test accounts supplier customer category product`
+Run the full suite (80 tests):
+`py manage.py test accounts supplier customer category product reports audit`
 
 ## Deployment (Render)
 1. Create a new Render Web Service from this repository.
@@ -105,6 +113,8 @@ Run the full suite (31 tests):
 3. Start command: `gunicorn core.wsgi:application`
 4. Set environment variables: `SECRET_KEY`, `DEBUG=False`, `USE_SQLITE=False`, `ALLOWED_HOSTS`, and `DB_ENGINE`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`. A `render.yaml` is included for direct import.
 5. Attach a Render PostgreSQL instance and map its connection variables.
+
+Live URL: `https://<your-app>.onrender.com`
 
 ## Documentation
 - [docs/user_manual.md](docs/user_manual.md)

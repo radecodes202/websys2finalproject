@@ -2,7 +2,40 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block scripts %}
+<script type="text/javascript">
+const salesTrendLabels = {{ sales_trend_labels|default:'[]'|safe }};
+const salesTrendData = {{ sales_trend_data|default:'[]'|safe }};
+const topProductsLabels = {{ top_products_labels|default:'[]'|safe }};
+const topProductsData = {{ top_products_data|default:'[]'|safe }};
+const categoryLabels = {{ category_labels|default:'[]'|safe }};
+const categoryData = {{ category_data|default:'[]'|safe }};
+const profitTrendLabels = {{ profit_trend_labels|default:'[]'|safe }};
+const profitTrendData = {{ profit_trend_data|default:'[]'|safe }};
+</script>
+{% endblock %}
+
 {% block content %}
+<!-- Date Range Filter -->
+<div class="row mb-3">
+    <div class="col-md-12">
+        <form method="get" class="d-flex gap-2 align-items-end">
+            <div class="flex-grow-1">
+                <label for="date_from" class="form-label">From</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from }}">
+            </div>
+            <div class="flex-grow-1">
+                <label for="date_to" class="form-label">To</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to }}">
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a href="{% url 'home' %}" class="btn btn-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-3">
         <div class="card text-white bg-primary mb-3">
@@ -15,7 +48,7 @@
     <div class="col-md-3">
         <div class="card text-white bg-success mb-3">
             <div class="card-body">
-                <h5 class="card-title">Total Sales Today</h5>
+                <h5 class="card-title">Total Sales</h5>
                 <p class="card-text display-4">{{ today_sales_count }}</p>
             </div>
         </div>
@@ -37,6 +70,153 @@
         </div>
     </div>
 </div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Today's Profit</h5>
+                <p class="card-text display-4">${{ today_profit|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Pending POs</h5>
+                <p class="card-text display-4">{{ pending_po_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Charts Row -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title">Sales Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="salesTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title">Top Selling Products</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="topProductsChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title">Sales by Category</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title">Profit Margin Trend</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="profitTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (salesTrendLabels.length) {
+        new Chart(document.getElementById('salesTrendChart'), {
+            type: 'line',
+            data: {
+                labels: salesTrendLabels,
+                datasets: [{
+                    label: 'Sales ($)',
+                    data: salesTrendData,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.4
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+    }
+    if (topProductsLabels.length) {
+        new Chart(document.getElementById('topProductsChart'), {
+            type: 'bar',
+            data: {
+                labels: topProductsLabels,
+                datasets: [{
+                    label: 'Units Sold',
+                    data: topProductsData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+    if (categoryLabels.length) {
+        new Chart(document.getElementById('categoryChart'), {
+            type: 'doughnut',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    data: categoryData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 206, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    if (profitTrendLabels.length) {
+        new Chart(document.getElementById('profitTrendChart'), {
+            type: 'line',
+            data: {
+                labels: profitTrendLabels,
+                datasets: [{
+                    label: 'Profit Margin (%)',
+                    data: profitTrendData,
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+});
+</script>
 
 <div class="row mt-4">
     <div class="col-md-8">

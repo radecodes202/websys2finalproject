@@ -18,6 +18,29 @@
                     <h5 class="mb-0">Products</h5>
                 </div>
                 <div class="card-body">
+                    <form method="get" class="row g-2 align-items-end mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Scan Barcode</label>
+                            <input type="text" name="barcode" class="form-control" placeholder="Scan or enter barcode..." autofocus>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-outline-primary w-100">Find Product</button>
+                        </div>
+                    </form>
+                    {% if scanned_product %}
+                    <div class="alert alert-success">
+                        Found: <strong>{{ scanned_product.name }}</strong> — Stock: {{ scanned_product.quantity_in_stock }}
+                        <form method="post" class="d-inline float-end">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="add_to_cart">
+                            <input type="hidden" name="product_id" value="{{ scanned_product.pk }}">
+                            <input type="hidden" name="quantity" value="1">
+                            <button type="submit" class="btn btn-sm btn-success">Add to Cart</button>
+                        </form>
+                    </div>
+                    {% elif barcode_error %}
+                    <div class="alert alert-danger">{{ barcode_error }}</div>
+                    {% endif %}
                     <form method="post" class="row g-2 align-items-end">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="add_to_cart">

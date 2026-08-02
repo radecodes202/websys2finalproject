@@ -165,10 +165,23 @@ class POSView(RoleRequiredMixin, View):
             })
 
         products = Product.objects.filter(is_active=True).order_by('name')
+        scanned_product = None
+        barcode_error = None
+        barcode_query = request.GET.get('barcode', '').strip()
+        if barcode_query:
+            scanned_product = Product.objects.filter(
+                models.Q(barcode=barcode_query) | models.Q(code=barcode_query) | models.Q(sku=barcode_query),
+                is_active=True
+            ).first()
+            if not scanned_product:
+                barcode_error = f'No active product found for "{barcode_query}".'
+
         return render(request, self.template_name, {
             'products': products,
             'cart_items': cart_items,
             'cart_total': total,
+            'scanned_product': scanned_product,
+            'barcode_error': barcode_error,
         })
 
     def post(self, request):
@@ -322,3 +335,63 @@ def receipt_view(request, pk):
 def receipt_print_view(request, pk):
     sale = get_object_or_404(Sale, pk=pk)
     return render(request, 'product/receipt_print.html', {'sale': sale})
+
+
+class StockAdjustmentView(RoleRequiredMixin, View):
+    """Manual stock adjustment with reason codes."""
+    template_name = 'product/stock_adjustment.html'
+    allowed_roles = ['admin', 'manager', 'inventory_staff']
+
+    def get(self, request):
+        products = Product.objects.filter(is_active=True).order_by('name')
+        return render(request, self.template_name, {'products': products})
+
+    def post(self, request):
+        product_id = request.POST.get('product_id')
+        quantity_change = int(request.POST.get('quantity_change', 0))
+        reason = request.POST.get('reason', '')
+        notes = request.POST.get('notes', '')
+
+        if not product_id or not reason:
+            messages.error(request, 'Product and reason are required.')
+            return redirect('product:stock-adjustment')
+
+        product = get_object_or_404(Product, pk=product_id)
+        old_stock = product.quantity_in_stock
+        new_stock = old_stock + quantity_change
+
+        if new_stock < 0:
+            messages.error(request, 'Resulting stock cannot be negative.')
+            return redirect('product:stock-adjustment')
+
+        with transaction.atomic():
+            product.quantity_in_stock = new_stock
+            product.save(update_fields=['quantity_in_stock'])
+            product.create_alerts()
+
+            StockMovement.objects.create(
+                product=product,
+                type='adjustment',
+                quantity_change=quantity_change,
+                resulting_stock_level=new_stock,
+                reference=f'Manual Adjustment - {reason}',
+            )
+
+            log_activity(
+                user=request.user,
+                action=AuditLog.ACTION_STOCK_ADJUSTMENT,
+                instance=product,
+                description=(
+                    f'Manual stock adjustment for {product.name}: {quantity_change:+} units. '
+                    f'Reason: {reason}. Notes: {notes}'
+                ),
+                changes={
+                    'quantity_in_stock': {'old': old_stock, 'new': new_stock},
+                    'reason': reason,
+                    'notes': notes,
+                },
+                severity=AuditLog.SEVERITY_WARNING,
+            )
+
+        messages.success(request, f'Stock adjusted for {product.name}. New quantity: {new_stock}')
+        return redirect('product:stock-adjustment')

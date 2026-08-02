@@ -19,7 +19,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from product.models import Alert, Product, Sale
+from product.models import Alert, Product, Sale, PurchaseOrder
 from audit.services import log_activity
 from audit.models import AuditLog
 from .forms import CustomUserCreationForm, AdminUserCreationForm
@@ -37,17 +37,107 @@ class HomeView(TemplateView):
         today = timezone.localdate()
         user = self.request.user
 
+        # Date-range filter
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        if date_from and date_to:
+            try:
+                date_from_obj = timezone.datetime.strptime(date_from, '%Y-%m-%d').date()
+                date_to_obj = timezone.datetime.strptime(date_to, '%Y-%m-%d').date()
+                sale_qs = Sale.objects.filter(date__date__gte=date_from_obj, date__date__lte=date_to_obj)
+            except ValueError:
+                sale_qs = Sale.objects.none()
+        else:
+            sale_qs = Sale.objects.filter(date__date=today)
+
         # Common KPIs
         context['product_count'] = Product.objects.count()
         context['low_stock_count'] = Product.objects.filter(quantity_in_stock__lte=models.F('reorder_level')).count()
         context['alerts_count'] = Alert.objects.filter(is_resolved=False).count()
 
+        # Sales KPIs
+        context['today_sales_count'] = sale_qs.count()
+        context['date_from'] = date_from
+        context['date_to'] = date_to
+
+        # Today's Profit = sum((unit_price - cost_price) * quantity) for completed sales today
+        from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+        profit_expr = ExpressionWrapper(
+            F('items__unit_price') - F('items__product__cost_price'),
+            output_field=DecimalField()
+        )
+        completed_sales_qs = sale_qs.filter(status=Sale.STATUS_COMPLETED)
+        context['today_profit'] = completed_sales_qs.annotate(
+            item_profit=profit_expr
+        ).aggregate(
+            total_profit=Sum('item_profit')
+        )['total_profit'] or 0
+
+        # Pending POs
+        context['pending_po_count'] = PurchaseOrder.objects.filter(status=PurchaseOrder.STATUS_PENDING).count()
+
+        # Chart data preparation
+        from django.db.models import Sum, F, DecimalField, ExpressionWrapper
+        from collections import defaultdict
+        import json
+
+        # Sales trend (last 7 days)
+        sales_trend_labels = []
+        sales_trend_data = []
+        for i in range(6, -1, -1):
+            d = today - timezone.timedelta(days=i)
+            sales_trend_labels.append(d.strftime('%Y-%m-%d'))
+            daily_total = Sale.objects.filter(date__date=d, status=Sale.STATUS_COMPLETED).aggregate(
+                total=Sum('total')
+            )['total'] or 0
+            sales_trend_data.append(float(daily_total))
+
+        # Top selling products
+        top_products = SaleItem.objects.filter(sale__status=Sale.STATUS_COMPLETED).values('product__name').annotate(
+            total_qty=Sum('quantity')
+        ).order_by('-total_qty')[:5]
+        top_products_labels = [item['product__name'] for item in top_products]
+        top_products_data = [int(item['total_qty']) for item in top_products]
+
+        # Sales by category
+        category_sales = SaleItem.objects.filter(sale__status=Sale.STATUS_COMPLETED).values('product__category__name').annotate(
+            total=Sum('subtotal')
+        ).order_by('-total')[:5]
+        category_labels = [item['product__category__name'] for item in category_sales]
+        category_data = [float(item['total']) for item in category_sales]
+
+        # Profit margin trend (last 7 days)
+        profit_trend_labels = []
+        profit_trend_data = []
+        for i in range(6, -1, -1):
+            d = today - timezone.timedelta(days=i)
+            profit_trend_labels.append(d.strftime('%Y-%m-%d'))
+            day_sales = Sale.objects.filter(date__date=d, status=Sale.STATUS_COMPLETED)
+            profit = day_sales.annotate(
+                item_profit=ExpressionWrapper(
+                    F('items__unit_price') - F('items__product__cost_price'),
+                    output_field=DecimalField()
+                )
+            ).aggregate(total_profit=Sum('item_profit'))['total_profit'] or 0
+            revenue = day_sales.aggregate(total=Sum('total'))['total'] or 0
+            margin = (profit / revenue * 100) if revenue > 0 else 0
+            profit_trend_data.append(round(float(margin), 2))
+
+        context.update({
+            'sales_trend_labels': json.dumps(sales_trend_labels),
+            'sales_trend_data': json.dumps(sales_trend_data),
+            'top_products_labels': json.dumps(top_products_labels),
+            'top_products_data': json.dumps(top_products_data),
+            'category_labels': json.dumps(category_labels),
+            'category_data': json.dumps(category_data),
+            'profit_trend_labels': json.dumps(profit_trend_labels),
+            'profit_trend_data': json.dumps(profit_trend_data),
+        })
+
         # Role-specific KPIs
         if getattr(user, 'role', None) == 'cashier':
-            context['today_sales_count'] = Sale.objects.filter(date__date=today, cashier=user).count()
             context['my_today_sales_count'] = Sale.objects.filter(date__date=today, cashier=user).count()
         else:
-            context['today_sales_count'] = Sale.objects.filter(date__date=today).count()
             context['my_today_sales_count'] = None
 
         return context

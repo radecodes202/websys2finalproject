@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Adjustment{% endblock %}
+
+{% block content %}
+<div class="page-surface">
+    <div class="page-header-row">
+        <div>
+            <div class="page-kicker">Inventory</div>
+            <h1 class="page-title">Manual Stock Adjustment</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Adjust Stock</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="product_id" class="form-label">Product</label>
+                            <select name="product_id" id="product_id" class="form-select" required>
+                                <option value="">Select a product...</option>
+                                {% for product in products %}
+                                <option value="{{ product.pk }}">{{ product.name }} (Current: {{ product.quantity_in_stock }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="quantity_change" class="form-label">Quantity Change</label>
+                            <input type="number" name="quantity_change" id="quantity_change" class="form-control" 
+                                   placeholder="e.g., +10 or -5" required>
+                            <div class="form-text">Use positive numbers to add stock, negative to remove.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">Reason</label>
+                            <select name="reason" id="reason" class="form-select" required>
+                                <option value="">Select a reason...</option>
+                                <option value="damaged">Damaged Goods</option>
+                                <option value="lost">Lost/Stolen</option>
+                                <option value="correction">Inventory Correction</option>
+                                <option value="expired">Expired</option>
+                                <option value="returned">Customer Return</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3" 
+                                      placeholder="Additional details..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Apply Adjustment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -127,8 +127,10 @@ class Product(models.Model):
             })
 
         if self.expiration_date:
+            from django.conf import settings
+            expiration_threshold = getattr(settings, 'EXPIRATION_WARNING_DAYS', 7)
             remaining_days = (self.expiration_date - timezone.now().date()).days
-            if remaining_days <= 7:
+            if remaining_days <= expiration_threshold:
                 alerts.append({
                     'type': 'expiring',
                     'message': f'{self.name} expires in {remaining_days} day(s).',
