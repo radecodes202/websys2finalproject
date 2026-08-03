@@ -15,13 +15,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-SECRET_KEY = env('SECRET_KEY', default=None)
+SECRET_KEY = env('SECRET_KEY')
 if not SECRET_KEY:
     raise ImproperlyConfigured('SECRET_KEY must be set in the environment.')
 
 DEBUG = env('DEBUG', default=False)
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'websys2finalproject-group3.onrender.com'])
-USE_SQLITE = env('USE_SQLITE', default=True)
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
+USE_SQLITE = env('USE_SQLITE', default=False)  # Force false for production
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -76,19 +76,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-if USE_SQLITE:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-else:
-    # Use DATABASE_URL if available (common for production platforms like Render)
-    # Fall back to individual DB_* variables for backward compatibility
-    DATABASES = {
-        'default': env.db('DATABASE_URL', default=f"{env('DB_ENGINE', default='django.db.backends.postgresql')}://{env('DB_USER', default='postgres')}:{env('DB_PASSWORD', default='postgres')}@{env('DB_HOST', default='localhost')}:{env('DB_PORT', default='5432')}/{env('DB_NAME', default='inventory_db')}")
-    }
+# Production-only database configuration - requires DATABASE_URL
+DATABASES = {
+    'default': env.db('DATABASE_URL'),
+}
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
