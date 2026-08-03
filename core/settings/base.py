@@ -23,6 +23,9 @@ DEBUG = env('DEBUG', default=False)
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 USE_SQLITE = env('USE_SQLITE', default=False)  # Force false for production
 
+# Read DISABLE_AXES environment variable, default to False (axes enabled)
+DISABLE_AXES = env('DISABLE_AXES', default=True)
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -31,7 +34,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
-    'axes',
+]
+
+if not DISABLE_AXES:
+    INSTALLED_APPS.append('axes')
+
+INSTALLED_APPS += [
     'accounts',
     'category',
     'product',
@@ -51,30 +59,16 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'axes.middleware.AxesMiddleware',
+]
+
+if not DISABLE_AXES:
+    MIDDLEWARE.append('axes.middleware.AxesMiddleware')
+
+MIDDLEWARE += [
     'audit.middleware.AuditMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
-ROOT_URLCONF = 'core.urls'
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
-
-WSGI_APPLICATION = 'core.wsgi.application'
 
 # Production-only database configuration - requires DATABASE_URL
 DATABASES = {
@@ -97,10 +91,16 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
-AUTHENTICATION_BACKENDS = [
-    'axes.backends.AxesStandaloneBackend',
-    'accounts.backends.AxesCompatBackend',
-]
+
+if not DISABLE_AXES:
+    AUTHENTICATION_BACKENDS = [
+        'axes.backends.AxesStandaloneBackend',
+        'accounts.backends.AxesCompatBackend',
+    ]
+else:
+    AUTHENTICATION_BACKENDS = [
+        'accounts.backends.AxesCompatBackend',
+    ]
 
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
