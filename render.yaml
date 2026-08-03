@@ -1,11 +1,10 @@
 services:
   - type: web
-    name: inventory-sales-supplier-system
-    env: python
+    name: websys2finalproject
+    runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
-    releaseCommand: python manage.py migrate
-    startCommand: gunicorn core.wsgi:application
+    startCommand: python manage.py migrate --noinput && gunicorn core.wsgi:application
     envVars:
       - key: DJANGO_ENV
         value: "prod"
