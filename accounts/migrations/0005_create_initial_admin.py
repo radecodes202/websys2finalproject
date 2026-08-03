@@ -32,11 +32,16 @@ def create_initial_admin(apps, schema_editor):
 
     # Create the superuser
     try:
-        User.objects.create_superuser(
+        user = User.objects.create_superuser(
             username=username,
             email=email,
             password=password
         )
+        # Explicitly set approval and role since custom save() isn't available in migrations
+        user.is_approved = True
+        if user.is_superuser:
+            user.role = 'admin'
+        user.save()
     except Exception as e:
         # Log the error but don't fail the migration
         # In a real app, you might want to use logging
