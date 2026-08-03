@@ -16,15 +16,5 @@ services:
         value: "False"
       - key: ALLOWED_HOSTS
         value: "websys2finalproject.onrender.com, .onrender.com"
-      - key: DB_ENGINE
-        value: django.db.backends.postgresql
-      - key: DB_NAME
-        value: postgres
-      - key: DB_USER
-        value: postgres
-      - key: DB_PASSWORD
-        value: postgres
-      - key: DB_HOST
-        value: dpg-d9nljvu1egvs738b8h6g-a
-      - key: DB_PORT
-        value: "5432"
+      - key: DATABASE_URL
+        sync: true
