@@ -57,6 +57,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0004_delete_activitylog'),
+        ('audit', '0001_initial'),  # Ensure AuditLog table exists for signal handlers
     ]
 
     operations = [
