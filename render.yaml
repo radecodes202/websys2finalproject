@@ -19,12 +19,12 @@ services:
       - key: DB_ENGINE
         value: django.db.backends.postgresql
       - key: DB_NAME
-        sync: true
+        value: postgres
       - key: DB_USER
-        sync: true
+        value: postgres
       - key: DB_PASSWORD
-        sync: true
+        value: postgres
       - key: DB_HOST
-        sync: true
+        value: dpg-d9nljvu1egvs738b8h6g-a
       - key: DB_PORT
         value: "5432"
