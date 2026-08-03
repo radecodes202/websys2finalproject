@@ -238,8 +238,10 @@ class UserManagementView(RoleRequiredMixin, View):
 
     def get(self, request):
         status_filter = request.GET.get('status', 'all')
+        search_query = request.GET.get('search', '').strip()
         users = User.objects.order_by('-date_joined')
 
+        # Apply status filter
         if status_filter == 'active':
             users = users.filter(is_active=True, is_approved=True)
         elif status_filter == 'pending':
@@ -247,9 +249,20 @@ class UserManagementView(RoleRequiredMixin, View):
         elif status_filter == 'inactive':
             users = users.filter(is_active=False)
 
+        # Apply search filter
+        if search_query:
+            from django.db.models import Q
+            users = users.filter(
+                Q(username__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query)
+            )
+
         return render(request, self.template_name, {
             'users': users,
             'status_filter': status_filter,
+            'search_query': search_query,
         })
 
     def post(self, request):

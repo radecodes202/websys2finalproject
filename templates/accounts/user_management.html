@@ -14,6 +14,41 @@
         </div>
     </div>
 
+    <!-- Search and Filter Section -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'accounts:user-management' %}" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" name="search" placeholder="Search users by name, email, or username..." value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Users</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending Approval</option>
+                        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'accounts:user-management' %}" class="btn btn-outline-secondary w-100">Reset</a>
+                </div>
+                <div class="col-md-2">
+                    {% if users|length > 0 %}
+                    <span class="text-muted d-block mt-2">{{ users|length }} user{{ users|length|pluralize }} found</span>
+                    {% else %}
+                    <span class="text-danger d-block mt-2">No users found</span>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Users</h5>
@@ -112,7 +147,7 @@
                     </table>
                 </div>
             {% else %}
-                <p class="empty-state">No users found.</p>
+                <p class="empty-state">No users found matching your search and filter criteria.</p>
             {% endif %}
         </div>
     </div>

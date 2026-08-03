@@ -9,6 +9,15 @@
         <p class="lead text-muted">Welcome to the Inventory Management System user manual. This guide provides role-specific instructions to help you navigate and use the system effectively based on your permissions.</p>
     </header>
 
+    <!-- Search Feature -->
+    <div class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" id="manualSearch" placeholder="Search within this manual...">
+        </div>
+        <small class="text-muted mt-1" id="searchStats"></small>
+    </div>
+
     <!-- Role Selector Tabs -->
     <ul class="nav nav-tabs mb-4" id="roleTab" role="tablist">
         <li class="nav-item" role="presentation">
@@ -75,7 +84,14 @@
                             <p>The left sidebar contains navigation links based on your role permissions. Use the hamburger menu (☰) on mobile devices or the toggle button on desktop to show/hide the sidebar.</p>
 
                             <h5>Search Functionality</h5>
-                            <p>Most list views include a search bar at the top. Use it to quickly find products, customers, suppliers, or transactions by name, ID, or other relevant fields.</p>
+                            <p>Throughout the system, you'll find search bars typically located at the top of list views (like Products, Customers, Users, etc.). These search fields allow you to:</p>
+                            <ul class="mb-3">
+                                <li>Filter results in real-time as you type</li>
+                                <li>Search by multiple fields depending on the context (name, ID, email, SKU, etc.)</li>
+                                <li>Clear the search by clicking the 'x' icon or deleting all text</li>
+                                <li>Press Enter to execute the search</li>
+                            </ul>
+                            <p><strong>Example:</strong> In the User Management section, try typing a user's name or email to instantly filter the user list.</p>
 
                             <h5>Filters and Sorting</h5>
                             <p>Click on column headers in tables to sort data ascending or descending. Some views offer additional filter options for date ranges, categories, or status.</p>
@@ -100,21 +116,7 @@
                         </div>
                     </div>
 
-                    <div class="card mb-4">
-                        <div class="card-body">
-                            <h2 class="card-title h4">Keyboard Shortcuts</h2>
-                            <ul class="list-unstyled">
-                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + D</strong>: Focus on dashboard</li>
-                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + P</strong>: Go to Products page</li>
-                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + S</strong>: Go to POS</li>
-                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + R</strong>: Go to Reports</li>
-                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + U</strong>: Go to User Management (Admin only)</li>
-                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Esc</strong>: Close modals and dropdowns</li>
-                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Ctrl + F</strong>: Open search in current view</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+                                    </div>
             </div>
         </div>
 
@@ -664,8 +666,79 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add active class to clicked tab and target pane
             this.classList.add('active');
             target.classList.add('show', 'active');
+
+            // Reset search when switching tabs
+            const searchInput = document.getElementById('manualSearch');
+            if (searchInput) {
+                searchInput.value = '';
+                updateSearchStats();
+                // Show all content in the new tab
+                const activeTabPane = document.querySelector('.tab-pane.show.active');
+                if (activeTabPane) {
+                    const searchableElements = activeTabPane.querySelectorAll('.card, h2, h3, h4, h5, h6, p, li');
+                    searchableElements.forEach(el => {
+                        el.style.display = '';
+                    });
+                }
+            }
         });
     });
+
+    // Search functionality
+    const searchInput = document.getElementById('manualSearch');
+    const searchStats = document.getElementById('searchStats');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            performSearch(this.value);
+        });
+
+        // Initialize search stats
+        updateSearchStats();
+    }
+
+    function performSearch(searchTerm) {
+        // Get active tab pane
+        const activeTabPane = document.querySelector('.tab-pane.show.active');
+        if (!activeTabPane) return;
+
+        // Elements to search within (headings, paragraphs, list items, cards)
+        const searchableElements = activeTabPane.querySelectorAll('.card, h2, h3, h4, h5, h6, p, li');
+
+        let visibleCount = 0;
+        const term = searchTerm.toLowerCase().trim();
+
+        searchableElements.forEach(element => {
+            const text = element.textContent.toLowerCase();
+            const matches = term === '' || text.includes(term);
+
+            if (matches) {
+                element.style.display = '';
+                visibleCount++;
+            } else {
+                element.style.display = 'none';
+            }
+        });
+
+        updateSearchStats(visibleCount, term);
+    }
+
+    function updateSearchStats(visibleCount = 0, searchTerm = '') {
+        if (!searchStats) return;
+
+        if (searchTerm === '') {
+            searchStats.textContent = '';
+            return;
+        }
+
+        if (visibleCount === 0) {
+            searchStats.textContent = 'No matches found for "' + searchTerm + '"';
+            searchStats.style.color = 'dc3545'; // Bootstrap danger color
+        } else {
+            searchStats.textContent = visibleCount + ' match' + (visibleCount !== 1 ? 'es' : '') + ' found for "' + searchTerm + '"';
+            searchStats.style.color = '198754'; // Bootstrap success color
+        }
+    }
 });
 </script>
 {% endblock %}
