@@ -85,6 +85,9 @@ TEMPLATES = [
     },
 ]
 
+ROOT_URLCONF = 'core.urls'
+WSGI_APPLICATION = 'core.wsgi.application'
+
 # Production-only database configuration - requires DATABASE_URL
 DATABASES = {
     'default': env.db('DATABASE_URL'),
