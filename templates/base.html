@@ -50,6 +50,11 @@
                 {% if request.user.is_admin %}
                 <a href="{% url 'accounts:user-management' %}" class="nav-link">User Management</a>
                 {% endif %}
+
+                {# User Manual — Available to all authenticated users #}
+                {% if request.user.is_authenticated %}
+                <a href="{% url 'user_manual' %}" class="nav-link">User Manual</a>
+                {% endif %}
             </nav>
             {% endif %}
         </aside>

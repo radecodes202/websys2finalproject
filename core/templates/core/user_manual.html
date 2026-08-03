@@ -1,0 +1,671 @@
+{% extends 'base.html' %}
+
+{% block title %}User Manual - Inventory Management System{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <header class="mb-5">
+        <h1 class="display-4 fw-bold">User Manual</h1>
+        <p class="lead text-muted">Welcome to the Inventory Management System user manual. This guide provides role-specific instructions to help you navigate and use the system effectively based on your permissions.</p>
+    </header>
+
+    <!-- Role Selector Tabs -->
+    <ul class="nav nav-tabs mb-4" id="roleTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-tab-pane" type="button" role="tab" aria-controls="all-tab-pane" aria-selected="true">All Users</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="admin-tab" data-bs-toggle="tab" data-bs-target="#admin-tab-pane" type="button" role="tab" aria-controls="admin-tab-pane" aria-selected="false">Admin</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="manager-tab" data-bs-toggle="tab" data-bs-target="#manager-tab-pane" type="button" role="tab" aria-controls="manager-tab-pane" aria-selected="false">Manager</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cashier-tab" data-bs-toggle="tab" data-bs-target="#cashier-tab-pane" type="button" role="tab" aria-controls="cashier-tab-pane" aria-selected="false">Cashier</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory-tab-pane" type="button" role="tab" aria-controls="inventory-tab-pane" aria-selected="false">Inventory Staff</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="roleTabContent">
+        <!-- All Users Tab -->
+        <div class="tab-pane fade show active" id="all-tab-pane" role="tabpanel" aria-labelledby="all-tab" tabindex="0">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Getting Started</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>The Inventory Management System (IMS) is designed to help small businesses manage their inventory, sales, purchases, and customer relationships.</p>
+                            <p>To begin, log in with your credentials. Your role determines what features you can access:</p>
+                            <ul>
+                                <li><strong>Admin</strong>: Full access to all system features including user management</li>
+                                <li><strong>Manager</strong>: Access to most features including reports, but limited user management</li>
+                                <li><strong>Cashier</strong>: Focused on sales and customer interactions</li>
+                                <li><strong>Inventory Staff</strong>: Focused on inventory tracking and management</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Dashboard Overview</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>Upon logging in, you will be redirected to the dashboard. The dashboard provides an overview of key metrics relevant to your role:</p>
+                            <ul>
+                                <li>Total products in inventory</li>
+                                <li>Low stock alerts (items below reorder level)</li>
+                                <li>Recent sales transactions</li>
+                                <li>Pending purchase orders</li>
+                                <li>Customer count and recent activity</li>
+                            </ul>
+                            <p>Use the dashboard to quickly assess the health of your business and take necessary actions based on your role responsibilities.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Common Features</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Navigation</h5>
+                            <p>The left sidebar contains navigation links based on your role permissions. Use the hamburger menu (☰) on mobile devices or the toggle button on desktop to show/hide the sidebar.</p>
+
+                            <h5>Search Functionality</h5>
+                            <p>Most list views include a search bar at the top. Use it to quickly find products, customers, suppliers, or transactions by name, ID, or other relevant fields.</p>
+
+                            <h5>Filters and Sorting</h5>
+                            <p>Click on column headers in tables to sort data ascending or descending. Some views offer additional filter options for date ranges, categories, or status.</p>
+
+                            <h5>Export Options</h5>
+                            <p>Reports and data tables often include export functionality (CSV, Excel) for further analysis in external tools.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title h4">Quick Tips</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-check-circle text-success me-2"></i> Use the search bar in each list view to quickly find items.</li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i> Regularly check the low stock alerts on the dashboard.</li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i> Backup your data periodically (if using a database that supports exports).</li>
+                                <li><i class="bi bi-check-circle text-success me-2"></i> Contact system administrator for access issues or feature requests.</li>
+                                <li><i class="bi bi-bell text-warning me-2"></i> Pay attention to notifications and alerts in the header.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title h4">Keyboard Shortcuts</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + D</strong>: Focus on dashboard</li>
+                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + P</strong>: Go to Products page</li>
+                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + S</strong>: Go to POS</li>
+                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + R</strong>: Go to Reports</li>
+                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Alt + U</strong>: Go to User Management (Admin only)</li>
+                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Esc</strong>: Close modals and dropdowns</li>
+                                <li><i class="bi bi-keyboard text-info me-2"></i> <strong>Ctrl + F</strong>: Open search in current view</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Tab -->
+        <div class="tab-pane fade" id="admin-tab-pane" role="tabpanel" aria-labelledby="admin-tab" tabindex="0">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Admin Role Overview</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As an Administrator, you have full access to all system features. You are responsible for system configuration, user management, and overseeing all business operations.</p>
+                            <p>Your dashboard includes comprehensive metrics covering all aspects of the business.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">User Management</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Managing User Accounts</h5>
+                            <p>Access via: Sidebar → User Management</p>
+                            <p>As an admin, you can:</p>
+                            <ul>
+                                <li>View all registered users in the system</li>
+                                <li>Approve new user registrations (users must be approved before they can log in)</li>
+                                <li>Assign roles to users (Admin, Manager, Cashier, Inventory Staff)</li>
+                                <li>Activate/deactivate user accounts</li>
+                                <li>Reset user passwords</li>
+                                <li>Edit user profile information</li>
+                            </ul>
+                            <p>To approve a user:</p>
+                            <ol>
+                                <li>Navigate to User Management</li>
+                                <li>Find users with "Pending Approval" status</li>
+                                <li>Select the user(s) you wish to approve</li>
+                                <li>Click the "Approve Selected" button</li>
+                                <li>Optionally assign a role if not already set</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">System Configuration</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Settings Management</h5>
+                            <p>Access via: Sidebar → Settings (if available)</p>
+                            <p>As admin, you may have access to:</p>
+                            <ul>
+                                <li>Company information setup</li>
+                                <li>Tax configuration</li>
+                                <li>Currency settings</li>
+                                <li>Notification preferences</li>
+                                <li>Backup and restore options</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Complete Access Privileges</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As Administrator, you have access to ALL features in the system:</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Inventory & Products</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Categories management</li>
+                                        <li>Products management (create, edit, delete)</li>
+                                        <li>Suppliers management</li>
+                                        <li>Purchase orders management</li>
+                                        <li>Inventory adjustments and transfers</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Sales & Customers</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Point of Sale (POS) access</li>
+                                        <li>Customers management</li>
+                                        <li>Sales orders and invoices</li>
+                                        <li>Returns and refunds processing</li>
+                                        <li>Sales reports and analytics</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Reports & Analytics</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Sales reports</li>
+                                        <li>Inventory reports</li>
+                                        <li>Purchase reports</li>
+                                        <li>Financial reports</li>
+                                        <li>Audit logs and activity tracking</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Administration</h5>
+                                    <ul class="list-ps-0">
+                                        <li>User management (as detailed above)</li>
+                                        <li>Role and permission configuration</li>
+                                        <li>System settings</li>
+                                        <li>Data import/export tools</li>
+                                        <li>Database maintenance</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title h4">Admin Best Practices</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-shield-lock text-info me-2"></i> Regularly review user access and permissions</li>
+                                <li><i class="bi bi-shield-lock text-info me-2"></i> Enable audit logging to track system changes</li>
+                                <li><i class="bi bi-shield-lock text-info me-2"></i> Schedule regular data backups</li>
+                                <li><i class="bi bi-shield-lock text-info me-2"></i> Keep the system updated with security patches</li>
+                                <li><i class="bi bi-person-plus text-info me-2"></i> Train new users on role-appropriate workflows</li>
+                                <li><i class="bi bi-graph-up text-info me-2"></i> Review reports regularly to identify business trends</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manager Tab -->
+        <div class="tab-pane fade" id="manager-tab-pane" role="tabpanel" aria-labelledby="manager-tab" tabindex="0">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Manager Role Overview</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As a Manager, you have access to most business operations features with a focus on oversight, reporting, and team coordination. You cannot manage user accounts or system settings.</p>
+                            <p>Your dashboard emphasizes sales performance, inventory levels, and key business metrics.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Sales and Customer Management</h213>ders Management</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Managing Sales Processes</h5>
+                            <p>Access via: Sidebar → Products, Customers, Reports</p>
+                            <p>As a manager, you can:</p>
+                            <ul>
+                                <li>View and manage products (though deletion may be restricted)</li>
+                                <li>View and manage customer information</li>
+                                <li>Access the Point of Sale (POS) for sales processing</li>
+                                <li>View sales history and generate sales reports</li>
+                                <li>Manage customer groups or loyalty programs (if applicable)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Inventory Oversight</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Monitoring Inventory Levels</h5>
+                            <p>Access via: Sidebar → Categories, Products, Suppliers, Purchase Orders</p>
+                            <p>As a manager, you can:</p>
+                            <ul>
+                                <li>View product categories and inventory levels</li>
+                                <li>See low stock alerts and reorder recommendations</li>
+                                <li>View and create purchase orders</li>
+                                <li>Manage supplier information</li>
+                                <li>Receive notifications for inventory issues</li>
+                                <li>Generate inventory valuation reports</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Reporting and Analytics</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Accessing Business Intelligence</h5>
+                            <p>Access via: Sidebar → Reports</p>
+                            <p>As a manager, you have access to:</p>
+                            <ul>
+                                <li>Sales reports (daily, weekly, monthly, custom ranges)</li>
+                                <li>Inventory reports (stock levels, turnover, valuation)</li>
+                                <li>Purchase reports (order history, supplier performance)</li>
+                                <li>Customer reports (purchase history, loyalty)</li>
+                                <li>Financial summaries (revenue, expenses, profit margins)</li>
+                                <li>Ability to filter reports by date, product, category, or customer</li>
+                                <li>Export reports in various formats (PDF, CSV, Excel)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Manager Access Summary</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As Manager, you have access to:</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Available Features</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Dashboard (business metrics view)</li>
+                                        <li>Products (view, edit - limited delete)</li>
+                                        <li>Categories (view, edit)</li>
+                                        <li>Suppliers (view, edit)</li>
+                                        <li>Purchase Orders (create, view, edit)</li>
+                                        <li>Customers (view, edit)</li>
+                                        <li>Point of Sale (full access)</li>
+                                        <li>Reports (all types)</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Restricted Features</h5>
+                                    <ul class="list-ps-0">
+                                        <li>User Management</li>
+                                        <li>System Settings</li>
+                                        <li>Role assignments</li>
+                                        <li>Administrative tools</li>
+                                        <li>Audit log deletion</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <p><em>Note: Exact permissions may vary based on specific configuration.</em></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title h4">Manager Best Practices</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-bar-chart text-info me-2"></i> Review sales and inventory reports weekly</li>
+                                <li><i class="bi bi-cart-check text-info me-2"></i> Monitor POS transactions for accuracy</li>
+                                <li><i class="bi bi-box-seam text-info me-2"></i> Work with inventory staff to maintain optimal stock levels</li>
+                                <li><i class="bi bi-people text-info me-2"></i> Coordinate with cashiers on customer service issues</li>
+                                <li><i class="bi bi-truck text-info me-2"></i> Review purchase orders and supplier performance</li>
+                                <li><i class="bi bi-chat-left-text text-info me-2"></i> Gather feedback from team on system usability</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cashier Tab -->
+        <div class="tab-pane fade" id="cashier-tab-pane" role="tabpanel" aria-labelledby="cashier-tab" tabindex="0">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Cashier Role Overview</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As a Cashier, your primary focus is processing sales transactions and providing excellent customer service at the point of sale. You have limited access to inventory and customer information.</p>
+                            <p>Your dashboard emphasizes quick access to sales functions and daily sales totals.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Point of Sale (POS) Operations</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Processing Sales Transactions</h5>
+                            <p>Access via: Sidebar → POS</p>
+                            <p>The POS interface is your primary workspace. Here you can:</p>
+                            <ol>
+                                <li>Search for products by name, SKU, or barcode</li>
+                                <li>Add products to the sale cart</li>
+                                <li>Apply discounts or promotions</li>
+                                <li>Process various payment methods (cash, card, etc.)</li>
+                                <li>Print or email receipts</li>
+                                <li>Handle returns and exchanges</li>
+                                <li>Manage customer lookup and creation</li>
+                            </ol>
+                            <p><strong>POS Workflow:</strong></p>
+                            <ol>
+                                <li>Log in and navigate to POS</li>
+                                <li>Search for customer or create new customer record</li>
+                                <li>Scan/search for products and add to cart</li>
+                                <li>Apply any applicable discounts</li>
+                                <li>Select payment method</li>
+                                <li>Process payment and complete sale</li>
+                                <li>Provide receipt to customer</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Customer Interactions</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Managing Customer Information</h5>
+                            <p>Access via: Sidebar → Customers (limited) or POS customer lookup</p>
+                            <p>As a cashier, you can:</p>
+                            <ul>
+                                <li>Look up existing customers by name, phone, or email</li>
+                                <li>Create new customer records during checkout</li>
+                                <li>View basic customer information (contact details, purchase history)</li>
+                                <li>Apply customer-specific discounts or loyalty benefits</li>
+                                <li>Update customer contact information if needed</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Limited Inventory Access</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Checking Product Availability</h5>
+                            <p>Access via: POS search or limited Products view</p>
+                            <p>As a cashier, you can:</p>
+                            <ul>
+                                <li>Search for products to check availability</li>
+                                <li>View basic product information (name, price, stock level)</li>
+                                <li>See if items are in stock before adding to cart</li>
+                                <li>Get notified if attempting to sell out-of-stock items</li>
+                                <li>Suggest alternative products if preferred item is unavailable</li>
+                            </ul>
+                            <p><em>Note: You cannot modify inventory levels or product details.</em></p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Cashier Access Summary</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As Cashier, you have access to:</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Available Features</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Point of Sale (full access)</li>
+                                        <li>Customer lookup (view, create)</li>
+                                        <li>Product search (view only)</li>
+                                        <li>Basic sales reports (own performance)</li>
+                                        <li>Daily sales summary</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Restricted Features</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Product creation/editing/deletion</li>
+                                        <li>Inventory adjustments</li>
+                                        <li>Purchase orders</li>
+                                        <li>Supplier management</li>
+                                        <li>User management</li>
+                                        <li>Most reports (except personal sales)</li>
+                                        <li>System settings</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title h4">Cashier Best Practices</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-bag-check text-info me-2"></i> Always verify product prices and stock before completing sale</li>
+                                <li><i class="bi bi-bag-check text-info me-2"></i> Greet customers warmly and maintain professional demeanor</li>
+                                <li><i class="bi bi-bag-check text-info me-2"></i> Double-check payment amounts and provide correct change</li>
+                                <li><i class="bi bi-bag-check text-info me-2"></i> Keep your workspace clean and organized</li>
+                                <li><i class="bi bi-bag-check text-info me-2"></i> Report any system issues or discrepancies to supervisor</li>
+                                <li><i class="bi bi-bag-check text-info me-2"></i> Learn common product shortcuts for faster service</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Staff Tab -->
+        <div class="tab-pane fade" id="inventory-tab-pane" role="tabpanel" aria-labelledby="inventory-tab" tabindex="0">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Inventory Staff Role Overview</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As Inventory Staff, your primary responsibility is managing inventory levels, tracking stock movements, and ensuring accurate product information. You have access to inventory and purchasing functions but limited sales access.</p>
+                            <p>Your dashboard emphasizes inventory metrics, low stock alerts, and pending purchase orders.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Inventory Management</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Tracking and Managing Stock</h5>
+                            <p>Access via: Sidebar → Categories, Products</p>
+                            <p>As inventory staff, you can:</p>
+                            <ul>
+                                <li>Create, edit, and manage product categories</li>
+                                <li>Create, edit, and manage products (including SKUs, descriptions, pricing)</li>
+                                <li>Set reorder levels and stock thresholds</li>
+                                <li>View real-time inventory levels and stock availability</li>
+                                <li>Perform inventory adjustments (stock corrections, damage, loss)</li>
+                                <li>Transfer inventory between locations (if applicable)</li>
+                                <li>Run inventory counts and reconcile discrepancies</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Purchase Order Management</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Managing Supplier Procurement</h5>
+                            <p>Access via: Sidebar → Suppliers, Purchase Orders</p>
+                            <p>As inventory staff, you can:</p>
+                            <ul>
+                                <li>Create, edit, and manage supplier information</li>
+                                <li>Create purchase orders based on reorder alerts or manual requests</li>
+                                <li>View and track purchase order status (pending, received, partial)</li>
+                                <li>Receive items against purchase orders</li>
+                                <li>Generate purchase reports and supplier performance metrics</li>
+                                <li>Manage supplier contacts and terms</li>
+                            </ul>
+                            <p><strong>Purchase Order Workflow:</strong></p>
+                            <ol>
+                                <li>Identify low stock items via dashboard or reports</li>
+                                <li>Create purchase order with selected supplier</li>
+                                <li>Add required products and quantities</li>
+                                <li>Submit purchase order for approval</li>
+                                <li>Track delivery and receive items</li>
+                                <li>Update inventory levels upon receipt</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Inventory Reporting</h2>
+                        </div>
+                        <div class="card-body">
+                            <h5>Analyzing Stock Performance</h5>
+                            <p>Access via: Sidebar → Reports</p>
+                            <p>As inventory staff, you have access to:</p>
+                            <ul>
+                                <li>Inventory levels reports (current stock, valuation)</li>
+                                <li>Stock movement reports (ins, outs, adjustments)</li>
+                                <li>Low stock and expiring items reports</li>
+                                <li>Inventory turnover rates</li>
+                                <li>ABC analysis (inventory categorization by value)</li>
+                                <li>Purchase order reports (pending, received, vendor performance)</li>
+                                <li>Ability to filter by category, supplier, date range</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h2 class="card-title h4 mb-0">Inventory Access Summary</h2>
+                        </div>
+                        <div class="card-body">
+                            <p>As Inventory Staff, you have access to:</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>Available Features</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Products (full create, edit, view)</li>
+                                        <li>Categories (full create, edit, view)</li>
+                                        <li>Suppliers (full create, edit, view)</li>
+                                        <li>Purchase Orders (create, view, edit, receive)</li>
+                                        <li>Inventory reports and analytics</li>
+                                        <li>Limited product search in POS</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>Restricted Features</h5>
+                                    <ul class="list-ps-0">
+                                        <li>Point of Sale (view/search only)</li>
+                                        <li>Customer management (beyond basic lookup)</li>
+                                        <li>Sales order creation/modification</li>
+                                        <li>User management</li>
+                                        <li>System settings</li>
+                                        <li>Financial reports (revenue, profit)</li>
+                                        <li>Most sales reports</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title h4">Inventory Best Practices</h2>
+                            <ul class="list-unstyled">
+                                <li><i class="bi bi-box-seam text-info me-2"></i> Conduct regular physical inventory counts</li>
+                                <li><i class="bi bi-box-seam text-info me-2"></i> Keep product descriptions and SKUs accurate</li>
+                                <li><i class="bi bi-box-seam text-info me-2"></i> Set appropriate reorder levels based on sales velocity</li>
+                                <li><i class="bi bi-box-seam text-info me-2"></i> Monitor expiration dates for perishable items</li>
+                                <li><i class="bi bi-box-seam text-info me-2"></i> Maintain good supplier relationships and communication</li>
+                                <li><i class="bi bi-box-seam text-info me-2"></i> Document all inventory adjustments with reasons</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap Tabs JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabEls = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabEls.forEach(function(tabEl) {
+        tabEl.addEventListener('click', function(event) {
+            event.preventDefault();
+            const target = document.querySelector(this.getAttribute('data-bs-target'));
+
+            // Remove active class from all tabs and panes
+            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(t) {
+                t.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-pane').forEach(function(p) {
+                p.classList.remove('show', 'active');
+            });
+
+            // Add active class to clicked tab and target pane
+            this.classList.add('active');
+            target.classList.add('show', 'active');
+        });
+    });
+});
+</script>
+{% endblock %}

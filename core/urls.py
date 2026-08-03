@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from accounts.views import HomeView, LoginView
+from core.views import UserManualView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,4 +30,5 @@ urlpatterns = [
     path('reports/', include('reports.urls')),
     path('audit/', include('audit.urls')),
     path('', HomeView.as_view(), name='home'),
+    path('manual/', UserManualView.as_view(), name='user_manual'),
 ]
