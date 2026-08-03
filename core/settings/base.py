@@ -87,14 +87,7 @@ else:
     # Use DATABASE_URL if available (common for production platforms like Render)
     # Fall back to individual DB_* variables for backward compatibility
     DATABASES = {
-        'default': env.db('DATABASE_URL', default={
-            'ENGINE': env('DB_ENGINE', default='django.db.backends.postgresql'),
-            'NAME': env('DB_NAME', default='inventory_db'),
-            'USER': env('DB_USER', default='postgres'),
-            'PASSWORD': env('DB_PASSWORD', default='postgres'),
-            'HOST': env('DB_HOST', default='localhost'),
-            'PORT': env('DB_PORT', default='5432'),
-        })
+        'default': env.db('DATABASE_URL', default=f"{env('DB_ENGINE', default='django.db.backends.postgresql')}://{env('DB_USER', default='postgres')}:{env('DB_PASSWORD', default='postgres')}@{env('DB_HOST', default='localhost')}:{env('DB_PORT', default='5432')}/{env('DB_NAME', default='inventory_db')}")
     }
 
 SESSION_COOKIE_HTTPONLY = True
